@@ -1,0 +1,520 @@
+.tc-page {
+  min-height: 100vh;
+  background: #fff;
+  padding: 10px 0 30px;
+}
+
+.tc-frame {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 26px 44px 50px;
+  position: relative;
+}
+
+/* ---------- Nav ---------- */
+
+.tc-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.tc-brand {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tc-brand-icon {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.tc-brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.tc-brand-navy {
+  color: #1a3a5c;
+}
+
+.tc-brand-orange {
+  color: #f47b20;
+}
+
+.tc-nav-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.tc-btn-signup {
+  background: #1a3a5c;
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.tc-btn-signup:hover {
+  background: #f47b20;
+  color: #fff;
+}
+
+/* ---------- Hero layout ---------- */
+
+.tc-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 44px;
+}
+
+.tc-hero-copy {
+  flex: 1.05;
+  min-width: 340px;
+  padding-top: 34px;
+}
+
+.tc-headline {
+  font-size: 52px;
+  line-height: 1.24;
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  margin: 0 0 30px;
+  color: #2b2f33;
+}
+
+.tc-highlight {
+  position: relative;
+  background: #fbdcbd;
+  color: inherit;
+  padding: 0 22px 6px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* the two pills reach into the line gap so they fuse into one blob */
+.tc-highlight-top {
+  z-index: 1;
+  padding-bottom: 10px;
+  margin-bottom: -10px;
+}
+
+.tc-highlight-bottom {
+  padding-top: 4px;
+  margin-top: -8px;
+}
+
+.tc-subhead {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #6b7684;
+  max-width: 48ch;
+  margin: 0 0 34px;
+  font-weight: 500;
+}
+
+.tc-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.tc-btn-primary {
+  background: #16202b;
+  color: #fff;
+  border-radius: 999px;
+  padding: 19px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tc-cta-row .tc-btn-primary:hover {
+  color: #fff;
+  background: #f47b20;
+}
+
+.tc-arrow {
+  font-size: 17px;
+}
+
+.tc-stat-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.4px solid rgba(22, 32, 43, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  box-shadow: 3px 4px 0 rgba(22, 32, 43, 0.12);
+}
+
+.tc-stat-number {
+  font-size: 17px;
+  font-weight: 800;
+  color: #16202b;
+}
+
+.tc-stat-label {
+  font-size: 8.5px;
+  line-height: 1.25;
+  color: #8a95a3;
+  font-weight: 700;
+  max-width: 62px;
+}
+
+.tc-campuses {
+  display: flex;
+  align-items: center;
+  gap: 38px;
+  margin-top: 60px;
+  font-weight: 800;
+  color: #16202b;
+  flex-wrap: wrap;
+}
+
+.tc-campuses span {
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Hero visual ---------- */
+
+.tc-hero-visual {
+  flex: 1;
+  min-width: 380px;
+  position: relative;
+  min-height: 520px;
+}
+
+.tc-spark {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tc-spark-tr {
+  right: -18px;
+  top: -16px;
+}
+
+.tc-spark-ml {
+  left: -34px;
+  bottom: 90px;
+  width: 118px;
+  height: 118px;
+}
+
+.tc-badge-spin {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 94px;
+  height: 94px;
+  z-index: 4;
+}
+
+@keyframes tcspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tc-spin-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: tcspin 14s linear infinite;
+}
+
+.tc-spin-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.4px solid #16202b;
+  color: #16202b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.tc-photo-frame {
+  position: absolute;
+  right: 56px;
+  top: 60px;
+  width: calc(100% - 150px);
+  max-width: 330px;
+  height: 380px;
+  background: #e2dcee;
+  border-radius: 34px;
+  overflow: hidden;
+  box-shadow: 0 26px 56px -30px rgba(22, 32, 43, 0.45);
+  z-index: 2;
+}
+
+.tc-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
+}
+
+.tc-tag-tutor {
+  position: absolute;
+  right: 6px;
+  top: 74px;
+  background: #fdebdd;
+  border: 1.3px solid #16202b;
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #16202b;
+  z-index: 5;
+}
+
+.tc-photo-dots {
+  position: absolute;
+  right: 78px;
+  top: 122px;
+  color: #16202b;
+  opacity: 0.5;
+  font-size: 9px;
+  letter-spacing: 3px;
+  z-index: 5;
+}
+
+.tc-tag-avg {
+  position: absolute;
+  right: 22px;
+  top: 108px;
+  background: #f47b20;
+  border: 1.3px solid #16202b;
+  color: #fff;
+  border-radius: 10px;
+  padding: 18px 7px;
+  font-size: 11.5px;
+  font-weight: 800;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.5px;
+  z-index: 4;
+}
+
+/* ---------- Grades card ---------- */
+
+.tc-card-grades {
+  position: absolute;
+  right: -14px;
+  bottom: -10px;
+  background: #fff;
+  border: 1px solid rgba(22, 32, 43, 0.12);
+  border-radius: 18px;
+  padding: 17px 18px;
+  width: 206px;
+  box-shadow: 0 18px 40px -16px rgba(22, 32, 43, 0.25);
+  z-index: 6;
+}
+
+.tc-card-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #16202b;
+  margin-bottom: 12px;
+}
+
+.tc-card-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6b7684;
+  margin-bottom: 6px;
+}
+
+.tc-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.tc-avatar-navy {
+  background: #1a3a5c;
+}
+
+.tc-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tc-card-metric {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6b7684;
+}
+
+.tc-card-value {
+  font-size: 12px;
+  font-weight: 800;
+  color: #f47b20;
+}
+
+.tc-card-more {
+  margin-top: 12px;
+  background: #f4f2f7;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7684;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.tc-dots {
+  letter-spacing: 1px;
+  color: #f47b20;
+}
+
+/* ---------- How-it-works pill ---------- */
+
+.tc-pill-video {
+  position: absolute;
+  left: 8px;
+  bottom: 56px;
+  background: #fff;
+  border: 1.3px solid rgba(22, 32, 43, 0.55);
+  border-radius: 999px;
+  padding: 6px 8px 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 6;
+}
+
+.tc-avatar-stack {
+  display: flex;
+}
+
+.tc-avatar-sm {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.tc-avatar-sm + .tc-avatar-sm {
+  margin-left: -9px;
+}
+
+.tc-bg-orange {
+  background: #f47b20;
+}
+
+.tc-bg-navy {
+  background: #1a3a5c;
+}
+
+.tc-bg-slate {
+  background: #8497aa;
+}
+
+.tc-pill-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #16202b;
+  padding-right: 4px;
+}
+
+.tc-play {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: #16202b;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+  .tc-frame {
+    padding: 20px 20px 40px;
+  }
+
+  .tc-headline {
+    font-size: 40px;
+    letter-spacing: -1px;
+  }
+
+  .tc-outline-pill,
+  .tc-highlight-2 {
+    margin-left: 0;
+  }
+
+  .tc-photo-frame {
+    right: 24px;
+  }
+
+  .tc-card-grades {
+    right: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .tc-hero-visual {
+    min-width: 300px;
+  }
+
+  .tc-headline {
+    font-size: 33px;
+  }
+}

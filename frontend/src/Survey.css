@@ -1,0 +1,605 @@
+.sv-page {
+  min-height: 100vh;
+  background: #eef1f6;
+  padding-bottom: 40px;
+}
+
+@keyframes svfade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes svpop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- Header ---------- */
+
+.sv-header {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #142e4a 0%, #1a3a5c 55%, #1f4a75 100%);
+  background-image:
+    radial-gradient(circle at 88% -10%, rgba(244, 123, 32, 0.38), transparent 44%),
+    radial-gradient(circle at -8% 110%, rgba(244, 123, 32, 0.16), transparent 40%),
+    radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.5px),
+    linear-gradient(135deg, #142e4a 0%, #1a3a5c 55%, #1f4a75 100%);
+  background-size:
+    auto,
+    auto,
+    26px 26px,
+    auto;
+  padding: 26px 22px 0;
+}
+
+.sv-doodles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sv-header > *:not(.sv-doodles) {
+  position: relative;
+}
+
+.sv-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.sv-underline {
+  position: relative;
+  display: inline-block;
+  color: #f47b20;
+  white-space: nowrap;
+}
+
+.sv-underline-swoosh {
+  position: absolute;
+  left: 0;
+  bottom: -14px;
+  width: 100%;
+  height: 20px;
+}
+
+.sv-orbit {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  flex-shrink: 0;
+}
+
+.sv-orbit-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: svspin 16s linear infinite;
+}
+
+@keyframes svspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sv-orbit-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(244, 123, 32, 0.18);
+  border: 1.5px solid rgba(244, 123, 32, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.sv-header > * {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sv-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.sv-brand {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.sv-brand-icon {
+  height: 30px;
+  width: auto;
+  display: block;
+  background: #fff;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.sv-brand-white {
+  color: #fff;
+}
+
+.sv-brand-orange {
+  color: #f47b20;
+}
+
+.sv-back {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sv-back:hover {
+  color: #f47b20;
+}
+
+.sv-title {
+  color: #fff;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+
+.sv-lede {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 26px;
+}
+
+.sv-tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.sv-tab {
+  flex: 1;
+  cursor: pointer;
+  padding: 16px 8px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 3px solid transparent;
+  border-radius: 14px 14px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  transition: all 0.2s;
+}
+
+.sv-tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sv-tab-active,
+.sv-tab-active:hover {
+  color: #fff;
+  background: rgba(244, 123, 32, 0.16);
+  border-bottom-color: #f47b20;
+}
+
+/* ---------- Trust strip ---------- */
+
+.sv-strip {
+  background: #f47b20;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px 0;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sv-strip-track {
+  display: inline-flex;
+  animation: svmarquee 22s linear infinite;
+}
+
+.sv-strip-track span {
+  flex-shrink: 0;
+}
+
+@keyframes svmarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Card ---------- */
+
+.sv-body {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 16px 0;
+}
+
+.sv-card {
+  animation: svfade 0.35s ease both;
+  background: #fff;
+  border-left: 6px solid #f47b20;
+  border-radius: 20px;
+  box-shadow:
+    0 14px 40px -18px rgba(26, 58, 92, 0.35),
+    0 2px 8px rgba(26, 58, 92, 0.06);
+  padding: 28px 26px 30px;
+}
+
+.sv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sv-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sv-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 120px;
+  padding-top: 6px;
+}
+
+.sv-progress-track {
+  width: 120px;
+  height: 7px;
+  border-radius: 999px;
+  background: #eef1f6;
+  overflow: hidden;
+}
+
+.sv-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f47b20, #ffa45c);
+  transition: width 0.35s ease;
+}
+
+.sv-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8497aa;
+}
+
+/* ---------- Numbered sections ---------- */
+
+.sv-section {
+  position: relative;
+  padding-left: 46px;
+}
+
+.sv-section::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 36px;
+  bottom: -14px;
+  border-left: 2px dashed #e5eaf0;
+}
+
+.sv-section:last-of-type::before {
+  display: none;
+}
+
+.sv-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sv-step {
+  position: absolute;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fdebdd;
+  border: 1.5px solid #f47b20;
+  color: #f47b20;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sv-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #1a3a5c;
+}
+
+.sv-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sv-form-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.sv-form-sub {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #8497aa;
+}
+
+.sv-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sv-row .sv-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sv-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a3a5c;
+}
+
+.sv-optional {
+  font-weight: 500;
+  color: #8497aa;
+}
+
+.sv-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e5eaf0;
+  border-radius: 11px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a3a5c;
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+textarea.sv-input {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.sv-input::placeholder {
+  color: #a9b6c4;
+}
+
+.sv-input:hover {
+  border-color: #c9d4e0;
+}
+
+.sv-input:focus {
+  border-color: #1a3a5c;
+  box-shadow: 0 0 0 3px rgba(26, 58, 92, 0.14);
+}
+
+.sv-select {
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%231A3A5C" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+}
+
+/* ---------- Chip groups ---------- */
+
+.sv-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sv-chip {
+  cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.15s;
+  border: 1.5px solid #e5eaf0;
+  background: #fff;
+  color: #33526e;
+}
+
+.sv-chip:hover {
+  border-color: #f47b20;
+  transform: translateY(-1px);
+}
+
+.sv-chip-active {
+  background: #fdebdd;
+  color: #f47b20;
+  border-color: #f47b20;
+  box-shadow: 0 4px 12px -6px rgba(244, 123, 32, 0.5);
+}
+
+/* ---------- Submit ---------- */
+
+.sv-submit {
+  cursor: pointer;
+  margin-top: 4px;
+  background: #1a3a5c;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 17px;
+  font-size: 15.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: all 0.2s;
+  box-shadow: 0 12px 26px -14px rgba(26, 58, 92, 0.6);
+}
+
+.sv-submit:hover {
+  background: #f47b20;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -14px rgba(244, 123, 32, 0.6);
+}
+
+.sv-submit-tutor {
+  background: #f47b20;
+  box-shadow: 0 12px 26px -14px rgba(244, 123, 32, 0.6);
+}
+
+.sv-submit-tutor:hover {
+  background: #1a3a5c;
+  box-shadow: 0 14px 30px -14px rgba(26, 58, 92, 0.6);
+}
+
+.sv-submit-arrow {
+  font-size: 17px;
+}
+
+/* ---------- Thank you ---------- */
+
+.sv-thanks {
+  animation: svpop 0.3s ease both;
+  background: #1a3a5c;
+  background-image: radial-gradient(
+    circle at 85% -20%,
+    rgba(244, 123, 32, 0.35),
+    transparent 50%
+  );
+  color: #fff;
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.sv-thanks-emoji {
+  font-size: 38px;
+  margin-bottom: 10px;
+}
+
+.sv-thanks-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 18px;
+}
+
+.sv-thanks-btn {
+  cursor: pointer;
+  background: #f47b20;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.sv-thanks-btn:hover {
+  background: #fff;
+  color: #1a3a5c;
+}
+
+/* ---------- Footer ---------- */
+
+.sv-footer {
+  text-align: center;
+  padding: 36px 24px 6px;
+}
+
+.sv-footer-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a3a5c;
+}
+
+.sv-footer-note {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8497aa;
+  margin-top: 8px;
+  max-width: 46ch;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .sv-title {
+    font-size: 28px;
+  }
+
+  .sv-card {
+    padding: 22px 18px 26px;
+  }
+}
