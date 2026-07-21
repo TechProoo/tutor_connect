@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { RESPONSES, CAMPUSES, exportCsv } from '../data'
+import { exportCsv, type SurveyResponse } from '../data'
 import { PageHeader, PrimaryButton, CountUp } from '../components/ui'
 import { Icon } from '../icons'
 
-interface CampusRow {
+interface FacultyRow {
   short: string
   full: string
   total: number
@@ -14,35 +14,41 @@ interface CampusRow {
   topDept: string
 }
 
-export function Campuses() {
-  const campuses: CampusRow[] = useMemo(
-    () =>
-      CAMPUSES.map((c) => {
-        const rs = RESPONSES.filter((r) => r.campus === c.short)
+export function Faculties({ responses }: { responses: SurveyResponse[] }) {
+  const faculties: FacultyRow[] = useMemo(() => {
+    const groups = new Map<string, SurveyResponse[]>()
+    for (const r of responses) {
+      if (!r.faculty) continue
+      const list = groups.get(r.faculty) ?? []
+      list.push(r)
+      groups.set(r.faculty, list)
+    }
+    return [...groups.entries()]
+      .map(([full, rs]) => {
         const students = rs.filter((r) => r.role === 'Student').length
         const deptCounts = new Map<string, number>()
-        for (const r of rs) deptCounts.set(r.dept, (deptCounts.get(r.dept) ?? 0) + 1)
+        for (const r of rs) if (r.dept) deptCounts.set(r.dept, (deptCounts.get(r.dept) ?? 0) + 1)
         const topDept = [...deptCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
         return {
-          short: c.short,
-          full: c.full,
+          short: rs[0].facultyShort,
+          full,
           total: rs.length,
           students,
           tutors: rs.length - students,
           completion: rs.length ? Math.round((rs.filter((r) => r.completed).length / rs.length) * 100) : 0,
           topDept,
         }
-      }).sort((a, b) => b.total - a.total),
-    [],
-  )
+      })
+      .sort((a, b) => b.total - a.total)
+  }, [responses])
 
-  const max = Math.max(...campuses.map((c) => c.total), 1)
-  const total = campuses.reduce((s, c) => s + c.total, 0)
+  const max = Math.max(...faculties.map((c) => c.total), 1)
+  const total = faculties.reduce((s, c) => s + c.total, 0)
 
   return (
     <>
-      <PageHeader kicker="Campuses · Reach" title="Campus Breakdown">
-        <PrimaryButton icon="download" onClick={() => exportCsv(RESPONSES, 'tutorconnect-all-campuses.csv')}>
+      <PageHeader kicker="Faculties · Reach" title="Faculty Breakdown">
+        <PrimaryButton icon="download" onClick={() => exportCsv(responses, 'tutorconnect-all-faculties.csv')}>
           Export All
         </PrimaryButton>
       </PageHeader>
@@ -74,10 +80,16 @@ export function Campuses() {
             <CountUp value={total} /> responses
           </div>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
-            across {campuses.length} campuses in the last 30 days
+            across {faculties.length} {faculties.length === 1 ? 'faculty' : 'faculties'} at Bells
           </div>
         </div>
       </motion.div>
+
+      {faculties.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', fontWeight: 600, padding: 40 }}>
+          No responses yet — faculty stats will appear as surveys come in.
+        </div>
+      )}
 
       <div
         style={{
@@ -86,9 +98,9 @@ export function Campuses() {
           gap: 16,
         }}
       >
-        {campuses.map((c, i) => (
+        {faculties.map((c, i) => (
           <motion.div
-            key={c.short}
+            key={c.full}
             className="card"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -119,7 +131,7 @@ export function Campuses() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                #{i + 1} campus
+                #{i + 1} faculty
               </span>
             </div>
 

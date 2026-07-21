@@ -1,0 +1,15 @@
+# Netlify config for the TutorConnect admin dashboard.
+# Create a SEPARATE Netlify site for the admin and set its
+# "Base directory" to `admin` — Netlify then reads this file.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: reloads on any route serve index.html with a 200.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Responses from the "I'm a Student" survey (Bells Google Form).
+model StudentSurvey {
+  id          String   @id @default(uuid())
+  school      String   @default("")
+  faculty     String   @default("")
+  department  String
+  level       String?
+  struggled   String?
+  courses     String[] @default([])
+  runTo       String?
+  wished      String?
+  wouldUse    String?
+  rate        String?
+  trust       String[] @default([])
+  timing      String?
+  format      String?
+  feature     String?
+  suggestions String?
+  createdAt   DateTime @default(now())
+
+  @@map("student_surveys")
+}
+
+/// Responses from the "I'm a Tutor" survey (Bells Google Form).
+model TutorSurvey {
+  id          String   @id @default(uuid())
+  school      String   @default("")
+  faculty     String   @default("")
+  department  String
+  level       String?
+  helped      String?
+  canTeach    String?
+  interested  String?
+  why         String[] @default([])
+  earn        String?
+  format      String?
+  stopYou     String?
+  join        String?
+  feature     String?
+  suggestions String?
+  createdAt   DateTime @default(now())
+
+  @@map("tutor_surveys")
+}

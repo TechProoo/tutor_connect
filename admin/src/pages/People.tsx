@@ -1,40 +1,41 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RESPONSES, CAMPUSES, timeAgo, exportCsv, type Role } from '../data'
+import { FACULTIES, timeAgo, exportCsv, type Role, type SurveyResponse } from '../data'
 import { StatCard, PageHeader, PrimaryButton, RolePill, type Stat } from '../components/ui'
 import { Icon } from '../icons'
 
 const PAGE_SIZE = 10
-// Snapshot "now" once per load — the dataset is also generated per load, so
-// week-based stats stay stable across re-renders.
+// Snapshot "now" once per load so week-based stats stay stable across re-renders.
 const LOADED_AT = Date.now()
 
-export function People({ role }: { role: Role }) {
+export function People({ role, responses }: { role: Role; responses: SurveyResponse[] }) {
   const [query, setQuery] = useState('')
-  const [campus, setCampus] = useState('All campuses')
+  const [faculty, setFaculty] = useState('All faculties')
 
-  // Paging keyed to the active filters: when role/query/campus change, the
+  // Paging keyed to the active filters: when role/query/faculty change, the
   // stored key no longer matches and the page derives back to 0 — no effect needed.
-  const filterKey = `${role}|${query}|${campus}`
+  const filterKey = `${role}|${query}|${faculty}`
   const [paging, setPaging] = useState({ key: filterKey, page: 0 })
   const page = paging.key === filterKey ? paging.page : 0
   const setPage = (fn: (p: number) => number) => setPaging({ key: filterKey, page: fn(page) })
 
   const plural = role === 'Student' ? 'Students' : 'Tutors'
-  const all = useMemo(() => RESPONSES.filter((r) => r.role === role), [role])
+  const all = useMemo(() => responses.filter((r) => r.role === role), [responses, role])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return all.filter(
       (r) =>
-        (campus === 'All campuses' || r.campus === campus) &&
+        (faculty === 'All faculties' || r.faculty === faculty) &&
         (!q ||
-          r.name.toLowerCase().includes(q) ||
+          r.school.toLowerCase().includes(q) ||
+          r.faculty.toLowerCase().includes(q) ||
           r.dept.toLowerCase().includes(q) ||
+          r.level.toLowerCase().includes(q) ||
           r.focus.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q)),
+          r.rate.toLowerCase().includes(q)),
     )
-  }, [all, query, campus])
+  }, [all, query, faculty])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const rows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -42,18 +43,18 @@ export function People({ role }: { role: Role }) {
   const stats: Stat[] = useMemo(() => {
     const completed = all.filter((r) => r.completed).length
     const week = all.filter((r) => LOADED_AT - r.submittedAt.getTime() < 7 * 86_400_000).length
-    const campusCount = new Set(all.map((r) => r.campus)).size
+    const facultyCount = new Set(all.map((r) => r.faculty).filter(Boolean)).size
     return [
       { label: `Total ${plural.toLowerCase()}`, value: all.length, icon: role === 'Student' ? 'cap' : 'book', accent: 'var(--navy)', iconBg: 'var(--navy-tint)', delta: `${filtered.length.toLocaleString('en-US')} matching filters`, deltaUp: true },
       { label: 'New this week', value: week, icon: 'trend', accent: 'var(--orange)', iconBg: 'var(--orange-tint)', delta: 'last 7 days', deltaUp: true },
       { label: 'Completed surveys', value: completed, icon: 'check', accent: 'var(--navy)', iconBg: 'var(--navy-tint)', delta: `${Math.round((completed / Math.max(all.length, 1)) * 100)}% completion`, deltaUp: true },
-      { label: 'Campuses reached', value: campusCount, icon: 'building', accent: 'var(--orange)', iconBg: 'var(--orange-tint)', delta: 'across Nigeria', deltaUp: true },
+      { label: 'Faculties reached', value: facultyCount, icon: 'building', accent: 'var(--orange)', iconBg: 'var(--orange-tint)', delta: 'across Bells', deltaUp: true },
     ]
   }, [all, filtered.length, plural, role])
 
   return (
     <>
-      <PageHeader kicker={`${plural} · Directory`} title={`${plural} Responses`}>
+      <PageHeader kicker={`${plural} · Responses`} title={`${plural} Responses`}>
         <PrimaryButton
           icon="download"
           onClick={() => exportCsv(filtered, `tutorconnect-${plural.toLowerCase()}.csv`)}
@@ -100,7 +101,7 @@ export function People({ role }: { role: Role }) {
             <input
               className="text-input"
               style={{ width: '100%', paddingLeft: 38 }}
-              placeholder={`Search ${plural.toLowerCase()} by name, dept, focus…`}
+              placeholder={`Search ${plural.toLowerCase()} by faculty, dept, focus…`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -108,13 +109,13 @@ export function People({ role }: { role: Role }) {
           <select
             className="text-input"
             style={{ cursor: 'pointer' }}
-            value={campus}
-            onChange={(e) => setCampus(e.target.value)}
+            value={faculty}
+            onChange={(e) => setFaculty(e.target.value)}
           >
-            <option>All campuses</option>
-            {CAMPUSES.map((c) => (
-              <option key={c.short} value={c.short}>
-                {c.full}
+            <option>All faculties</option>
+            {FACULTIES.map((f) => (
+              <option key={f} value={f}>
+                {f}
               </option>
             ))}
           </select>
@@ -133,18 +134,22 @@ export function People({ role }: { role: Role }) {
                   letterSpacing: '0.5px',
                 }}
               >
-                <th style={{ padding: '10px 12px' }}>Name</th>
+                <th style={{ padding: '10px 12px' }}>Faculty</th>
                 <th style={{ padding: '10px 12px' }}>Role</th>
-                <th style={{ padding: '10px 12px' }}>Campus</th>
                 <th style={{ padding: '10px 12px' }}>Department</th>
-                <th style={{ padding: '10px 12px' }}>Focus</th>
+                <th style={{ padding: '10px 12px' }}>
+                  {role === 'Student' ? 'Struggling with' : 'Can teach'}
+                </th>
+                <th style={{ padding: '10px 12px' }}>
+                  {role === 'Student' ? 'Will pay' : 'Wants to earn'}
+                </th>
                 <th style={{ padding: '10px 12px' }}>Status</th>
                 <th style={{ padding: '10px 12px' }}>Submitted</th>
               </tr>
             </thead>
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.tbody
-                key={`${role}-${page}-${query}-${campus}`}
+                key={`${role}-${page}-${query}-${faculty}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -156,15 +161,17 @@ export function People({ role }: { role: Role }) {
                     style={{ borderTop: '1px solid var(--bg)', fontSize: 13.5, fontWeight: 500 }}
                   >
                     <td style={{ padding: '13px 12px', fontWeight: 700 }}>
-                      {r.name}
-                      <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>{r.email}</div>
+                      {r.facultyShort}
+                      <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>{r.school || '—'}</div>
                     </td>
                     <td style={{ padding: '13px 12px' }}>
                       <RolePill role={r.role} />
                     </td>
-                    <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{r.campus}</td>
-                    <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{`${r.dept}, ${r.level}`}</td>
-                    <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{r.focus}</td>
+                    <td style={{ padding: '13px 12px', color: 'var(--body)' }}>
+                      {r.level ? `${r.dept}, ${r.level}` : r.dept}
+                    </td>
+                    <td style={{ padding: '13px 12px', color: 'var(--body)', maxWidth: 240 }}>{r.focus}</td>
+                    <td style={{ padding: '13px 12px', color: 'var(--body)', whiteSpace: 'nowrap' }}>{r.rate || '—'}</td>
                     <td style={{ padding: '13px 12px' }}>
                       <span
                         style={{
@@ -190,7 +197,9 @@ export function People({ role }: { role: Role }) {
                       colSpan={7}
                       style={{ padding: '34px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}
                     >
-                      No {plural.toLowerCase()} match “{query}”
+                      {all.length === 0
+                        ? `No ${plural.toLowerCase()} yet — share the survey link!`
+                        : `No ${plural.toLowerCase()} match “${query}”`}
                     </td>
                   </tr>
                 )}

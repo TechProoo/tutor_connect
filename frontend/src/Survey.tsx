@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import tcIcon from './assets/tc-icon.png'
+import { submitStudentSurvey, submitTutorSurvey } from './api'
 import './Survey.css'
 
 /* ---------- Shared option sets (verbatim from the Bells survey) ---------- */
@@ -301,6 +302,13 @@ function Survey() {
   const [tutor, setTutor] = useState(blankTutor)
   const [studentSubmitted, setStudentSubmitted] = useState(false)
   const [tutorSubmitted, setTutorSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const switchTab = (t: 'student' | 'tutor') => {
+    setTab(t)
+    setError(null)
+  }
 
   const setS = (field: StringKeys<typeof blankStudent>) => (v: string) =>
     setStudent((s) => ({ ...s, [field]: v }))
@@ -352,15 +360,35 @@ function Survey() {
     tutor.join,
   ])
 
-  const submitStudent = (e: FormEvent) => {
+  const submitStudent = async (e: FormEvent) => {
     e.preventDefault()
-    setStudentSubmitted(true)
-    setStudent(blankStudent)
+    if (sending) return
+    setSending(true)
+    setError(null)
+    try {
+      await submitStudentSurvey(student)
+      setStudentSubmitted(true)
+      setStudent(blankStudent)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setSending(false)
+    }
   }
-  const submitTutor = (e: FormEvent) => {
+  const submitTutor = async (e: FormEvent) => {
     e.preventDefault()
-    setTutorSubmitted(true)
-    setTutor(blankTutor)
+    if (sending) return
+    setSending(true)
+    setError(null)
+    try {
+      await submitTutorSurvey(tutor)
+      setTutorSubmitted(true)
+      setTutor(blankTutor)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -480,14 +508,14 @@ function Survey() {
           <button
             type="button"
             className={`sv-tab${tab === 'student' ? ' sv-tab-active' : ''}`}
-            onClick={() => setTab('student')}
+            onClick={() => switchTab('student')}
           >
             🎒 I'm a Student
           </button>
           <button
             type="button"
             className={`sv-tab${tab === 'tutor' ? ' sv-tab-active' : ''}`}
-            onClick={() => setTab('tutor')}
+            onClick={() => switchTab('tutor')}
           >
             📚 I'm a Tutor
           </button>
@@ -674,8 +702,10 @@ function Survey() {
                   </Field>
                 </Section>
 
-                <button type="submit" className="sv-submit">
-                  Submit Student Survey <span className="sv-submit-arrow">↗</span>
+                {error && <div className="sv-error">{error}</div>}
+                <button type="submit" className="sv-submit" disabled={sending}>
+                  {sending ? 'Submitting…' : 'Submit Student Survey'}{' '}
+                  {!sending && <span className="sv-submit-arrow">↗</span>}
                 </button>
               </form>
             )}
@@ -815,8 +845,14 @@ function Survey() {
                   </Field>
                 </Section>
 
-                <button type="submit" className="sv-submit sv-submit-tutor">
-                  Submit Tutor Survey <span className="sv-submit-arrow">↗</span>
+                {error && <div className="sv-error">{error}</div>}
+                <button
+                  type="submit"
+                  className="sv-submit sv-submit-tutor"
+                  disabled={sending}
+                >
+                  {sending ? 'Submitting…' : 'Submit Tutor Survey'}{' '}
+                  {!sending && <span className="sv-submit-arrow">↗</span>}
                 </button>
               </form>
             )}

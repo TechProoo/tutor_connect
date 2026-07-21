@@ -1,0 +1,25 @@
+# Render Blueprint — deploys the NestJS backend from the backend/ folder.
+# In Render: New + → Blueprint → pick this repo. Then fill in the two
+# database env vars (marked sync: false) from Supabase when prompted.
+services:
+  - type: web
+    name: tutorconnect-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /
+    envVars:
+      # Supabase transaction pooler (port 6543, pgbouncer=true)
+      - key: DATABASE_URL
+        sync: false
+      # Supabase session pooler (port 5432) — used by Prisma migrations
+      - key: DIRECT_URL
+        sync: false
+      # Auto-generated secret required by the admin dashboard (x-admin-key).
+      # Copy it from the Render dashboard → Environment into the admin login.
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: NODE_VERSION
+        value: 20.19.0

@@ -1,13 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon, type IconName } from '../icons'
 
-export type Section = 'Overview' | 'Students' | 'Tutors' | 'Campuses' | 'Settings'
+export type Section = 'Overview' | 'Students' | 'Tutors' | 'Faculties' | 'Settings'
 
 const NAV_ITEMS: { label: Section; icon: IconName }[] = [
   { label: 'Overview', icon: 'grid' },
   { label: 'Students', icon: 'cap' },
   { label: 'Tutors', icon: 'book' },
-  { label: 'Campuses', icon: 'building' },
+  { label: 'Faculties', icon: 'building' },
   { label: 'Settings', icon: 'gear' },
 ]
 
@@ -60,14 +60,22 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                gap: 7,
                 fontSize: 19,
                 fontWeight: 800,
                 letterSpacing: '-0.4px',
                 whiteSpace: 'nowrap',
               }}
             >
-              <span style={{ color: '#fff' }}>Tutor</span>
-              <span style={{ color: 'var(--orange)' }}>connect</span>
+              <img
+                src="/tc-icon.png"
+                alt="TutorConnect logo"
+                style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ color: '#fff' }}>Tutor</span>
+                <span style={{ color: 'var(--orange)' }}>Connect</span>
+              </span>
             </motion.div>
           )}
         </AnimatePresence>

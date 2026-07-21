@@ -5,10 +5,11 @@ import {
   previousRangeResponses,
   pctDelta,
   dailyBuckets,
-  campusLeaderboard,
+  facultyLeaderboard,
   timeAgo,
   exportCsv,
   type RangeDays,
+  type SurveyResponse,
 } from '../data'
 import {
   StatCard,
@@ -28,15 +29,21 @@ const RANGE_MAP: Record<RangeLabel, RangeDays> = { '7 days': 7, '14 days': 14, '
 const FILTERS = ['All', 'Students', 'Tutors'] as const
 type Filter = (typeof FILTERS)[number]
 
-export function Overview() {
+export function Overview({
+  responses,
+  onRefresh,
+}: {
+  responses: SurveyResponse[]
+  onRefresh: () => void
+}) {
   const [rangeLabel, setRangeLabel] = useState<RangeLabel>('14 days')
   const [filter, setFilter] = useState<Filter>('All')
   const days = RANGE_MAP[rangeLabel]
 
-  const current = useMemo(() => rangeResponses(days), [days])
-  const previous = useMemo(() => previousRangeResponses(days), [days])
-  const chart = useMemo(() => dailyBuckets(days), [days])
-  const campuses = useMemo(() => campusLeaderboard(days).slice(0, 5), [days])
+  const current = useMemo(() => rangeResponses(responses, days), [responses, days])
+  const previous = useMemo(() => previousRangeResponses(responses, days), [responses, days])
+  const chart = useMemo(() => dailyBuckets(responses, days), [responses, days])
+  const faculties = useMemo(() => facultyLeaderboard(responses, days).slice(0, 5), [responses, days])
 
   const stats: Stat[] = useMemo(() => {
     const count = (rs: typeof current, pred: (r: (typeof current)[number]) => boolean) => rs.filter(pred).length
@@ -70,6 +77,9 @@ export function Overview() {
     <>
       <PageHeader kicker="Survey Dashboard" title="Response Overview">
         <Segmented options={RANGE_LABELS} value={rangeLabel} onChange={setRangeLabel} variant="outline" layoutId="range-seg" />
+        <PrimaryButton icon="trend" onClick={onRefresh}>
+          Refresh
+        </PrimaryButton>
         <PrimaryButton icon="download" onClick={() => exportCsv(current, `tutorconnect-responses-${days}d.csv`)}>
           Export CSV
         </PrimaryButton>
@@ -119,8 +129,14 @@ export function Overview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.2 }}
         >
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 18 }}>Top campuses</div>
-          <CampusBars campuses={campuses} />
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 18 }}>Top faculties</div>
+          {faculties.length > 0 ? (
+            <CampusBars campuses={faculties} />
+          ) : (
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
+              No responses in this period yet.
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -156,9 +172,8 @@ export function Overview() {
                   letterSpacing: '0.5px',
                 }}
               >
-                <th style={{ padding: '10px 12px' }}>Name</th>
+                <th style={{ padding: '10px 12px' }}>Faculty</th>
                 <th style={{ padding: '10px 12px' }}>Role</th>
-                <th style={{ padding: '10px 12px' }}>Campus</th>
                 <th style={{ padding: '10px 12px' }}>Department</th>
                 <th style={{ padding: '10px 12px' }}>Focus</th>
                 <th style={{ padding: '10px 12px' }}>Submitted</th>
@@ -173,16 +188,32 @@ export function Overview() {
                   transition={{ duration: 0.25, delay: i * 0.04 }}
                   style={{ borderTop: '1px solid var(--bg)', fontSize: 13.5, fontWeight: 500 }}
                 >
-                  <td style={{ padding: '13px 12px', fontWeight: 700 }}>{r.name}</td>
+                  <td style={{ padding: '13px 12px', fontWeight: 700 }}>
+                    {r.facultyShort}
+                    <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>{r.school || '—'}</div>
+                  </td>
                   <td style={{ padding: '13px 12px' }}>
                     <RolePill role={r.role} />
                   </td>
-                  <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{r.campus}</td>
-                  <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{`${r.dept}, ${r.level}`}</td>
+                  <td style={{ padding: '13px 12px', color: 'var(--body)' }}>
+                    {r.level ? `${r.dept}, ${r.level}` : r.dept}
+                  </td>
                   <td style={{ padding: '13px 12px', color: 'var(--body)' }}>{r.focus}</td>
-                  <td style={{ padding: '13px 12px', color: 'var(--muted)' }}>{timeAgo(r.submittedAt)}</td>
+                  <td style={{ padding: '13px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {timeAgo(r.submittedAt)}
+                  </td>
                 </motion.tr>
               ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    style={{ padding: '34px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}
+                  >
+                    No responses in this period yet — share the survey link!
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

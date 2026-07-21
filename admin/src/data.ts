@@ -1,145 +1,52 @@
 // ---------------------------------------------------------------------------
 // TutorConnect Admin — data layer
-// A deterministic, realistic survey-response dataset that every page derives
-// its numbers from, so ranges / filters / charts all recompute for real.
-// Swap `generateResponses` for an API call when the backend ships endpoints.
+// Types and pure helpers over the real survey responses fetched from the
+// backend (see api.ts). Every page derives its numbers from the same array.
 // ---------------------------------------------------------------------------
 
 export type Role = 'Student' | 'Tutor'
 
+/** A student or tutor survey response, normalised for the dashboard. */
 export interface SurveyResponse {
-  id: number
-  name: string
+  id: string
   role: Role
-  campus: string
-  campusFull: string
+  /** School / university attended ('' if not recorded). */
+  school: string
+  /** Full faculty name, e.g. "Faculty of Computing" ('' if not recorded). */
+  faculty: string
+  /** Faculty without the "Faculty of " prefix, for compact display. */
+  facultyShort: string
   dept: string
   level: string
+  /** Students: courses they struggle with · Tutors: courses they can teach. */
   focus: string
-  email: string
+  /** Students: willing-to-pay rate · Tutors: expected earning rate. */
+  rate: string
+  format: string
   submittedAt: Date
+  /** True when at least two-thirds of the optional questions were answered. */
   completed: boolean
 }
 
-export const CAMPUSES: { short: string; full: string; weight: number }[] = [
-  { short: 'UNILAG', full: 'University of Lagos', weight: 26 },
-  { short: 'OAU', full: 'Obafemi Awolowo Univ.', weight: 21 },
-  { short: 'UI', full: 'University of Ibadan', weight: 17 },
-  { short: 'UNIBEN', full: 'University of Benin', weight: 15 },
-  { short: 'ABU Zaria', full: 'Ahmadu Bello Univ.', weight: 12 },
-  { short: 'Bells Univ.', full: 'Bells University of Technology', weight: 9 },
+/** Fixed faculty list (mirrors the survey form) for filters. */
+export const FACULTIES = [
+  'Faculty of Computing',
+  'Faculty of Basic Medical Sciences',
+  'Faculty of Nursing',
+  'Faculty of Arts',
+  'Faculty of Technology',
+  'Faculty of Social Management and Sciences',
+  'Faculty of Law',
+  'Faculty of Education',
+  'Faculty of Science',
+  'Faculty of Pharmacy',
+  'Faculty of Engineering',
 ]
 
-const FIRST_NAMES = [
-  'Amaka', 'Tunde', 'Aisha', 'Chidi', 'Ngozi', 'Femi', 'Blessing', 'Emeka',
-  'Fatima', 'Segun', 'Chioma', 'Ibrahim', 'Yemi', 'Halima', 'Obinna', 'Kemi',
-  'Musa', 'Adaeze', 'Kunle', 'Zainab', 'Ifeanyi', 'Bola', 'Nneka', 'Sani',
-  'Tola', 'Uche', 'Funke', 'Dayo', 'Amina', 'Chinedu',
-]
-const LAST_NAMES = [
-  'Obi', 'Bello', 'Yusuf', 'Nwosu', 'Eze', 'Adeyemi', 'Okafor', 'Ibrahim',
-  'Adebayo', 'Okonkwo', 'Lawal', 'Balogun', 'Chukwu', 'Mohammed', 'Ogunleye',
-  'Danladi', 'Anyanwu', 'Oyelaran', 'Abubakar', 'Nnamdi',
-]
-
-const STUDENT_TRACKS: { dept: string; focus: string }[] = [
-  { dept: 'Computer Science', focus: 'Calculus, Algorithms' },
-  { dept: 'Biochemistry', focus: 'Organic Chemistry' },
-  { dept: 'Economics', focus: 'Microeconomics' },
-  { dept: 'Law', focus: 'Constitutional Law' },
-  { dept: 'Mech. Engineering', focus: 'Thermodynamics' },
-  { dept: 'Accounting', focus: 'Financial Accounting' },
-  { dept: 'Medicine', focus: 'Anatomy, Physiology' },
-  { dept: 'Mass Comm.', focus: 'Media Writing' },
-  { dept: 'Elect. Engineering', focus: 'Circuit Theory' },
-  { dept: 'Statistics', focus: 'Probability Theory' },
-]
-
-const TUTOR_TRACKS: { dept: string; focus: string }[] = [
-  { dept: 'Mech. Engineering', focus: 'Physics, Statistics' },
-  { dept: 'Mathematics', focus: 'Maths, Further Maths' },
-  { dept: 'Comp. Science', focus: 'Python, Data Structures' },
-  { dept: 'Chemistry', focus: 'Organic & Inorganic Chem.' },
-  { dept: 'Economics', focus: 'Econometrics' },
-  { dept: 'Physics', focus: 'Mechanics, Electricity' },
-  { dept: 'English', focus: 'Essay Writing, Use of English' },
-  { dept: 'Accounting', focus: 'Cost Accounting, Taxation' },
-]
-
-// Deterministic PRNG so numbers are stable across reloads (mulberry32).
-function mulberry32(seed: number) {
-  return () => {
-    seed |= 0
-    seed = (seed + 0x6d2b79f5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+export function facultyShortName(faculty: string): string {
+  const short = faculty.replace(/^Faculty of /i, '').trim()
+  return short || '—'
 }
-
-function pick<T>(rand: () => number, arr: T[]): T {
-  return arr[Math.floor(rand() * arr.length)]
-}
-
-function pickCampus(rand: () => number) {
-  const total = CAMPUSES.reduce((s, c) => s + c.weight, 0)
-  let roll = rand() * total
-  for (const c of CAMPUSES) {
-    roll -= c.weight
-    if (roll <= 0) return c
-  }
-  return CAMPUSES[0]
-}
-
-function generateResponses(): SurveyResponse[] {
-  const rand = mulberry32(20260721)
-  const now = new Date()
-  const responses: SurveyResponse[] = []
-  let id = 1
-
-  // 30 days of history; volume ramps up towards today (the launch gained
-  // traction), with weekday peaks and weekend dips.
-  for (let daysAgo = 29; daysAgo >= 0; daysAgo--) {
-    const date = new Date(now)
-    date.setDate(now.getDate() - daysAgo)
-    const dow = date.getDay()
-    const weekend = dow === 0 || dow === 6
-    const ramp = 1 + (29 - daysAgo) / 14 // growth factor
-    const base = weekend ? 18 : 34
-    const count = Math.round(base * ramp * (0.75 + rand() * 0.5))
-
-    for (let i = 0; i < count; i++) {
-      const role: Role = rand() < 0.655 ? 'Student' : 'Tutor'
-      const campus = pickCampus(rand)
-      const track = role === 'Student' ? pick(rand, STUDENT_TRACKS) : pick(rand, TUTOR_TRACKS)
-      const level =
-        role === 'Student'
-          ? pick(rand, ['100L', '200L', '200L', '300L', '300L', '400L'])
-          : pick(rand, ['300L', '400L', '400L', '500L', '500L', 'Graduate'])
-      const first = pick(rand, FIRST_NAMES)
-      const last = pick(rand, LAST_NAMES)
-      const at = new Date(date)
-      at.setHours(Math.floor(8 + rand() * 14), Math.floor(rand() * 60), Math.floor(rand() * 60), 0)
-      responses.push({
-        id: id++,
-        name: `${first} ${last}`,
-        role,
-        campus: campus.short,
-        campusFull: campus.full,
-        dept: track.dept,
-        level,
-        focus: track.focus,
-        email: `${first.toLowerCase()}.${last.toLowerCase()}${id}@student.edu.ng`,
-        submittedAt: at,
-        completed: rand() < 0.91,
-      })
-    }
-  }
-
-  return responses.sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())
-}
-
-export const RESPONSES: SurveyResponse[] = generateResponses()
 
 // ---------------------------------------------------------------------------
 // Derived helpers
@@ -154,18 +61,18 @@ export function inRange(r: SurveyResponse, days: RangeDays): boolean {
   return r.submittedAt >= cutoff
 }
 
-export function rangeResponses(days: RangeDays): SurveyResponse[] {
-  return RESPONSES.filter((r) => inRange(r, days))
+export function rangeResponses(all: SurveyResponse[], days: RangeDays): SurveyResponse[] {
+  return all.filter((r) => inRange(r, days))
 }
 
 /** Responses from the equally-sized period immediately before the range. */
-export function previousRangeResponses(days: RangeDays): SurveyResponse[] {
+export function previousRangeResponses(all: SurveyResponse[], days: RangeDays): SurveyResponse[] {
   const end = new Date()
   end.setDate(end.getDate() - days)
   end.setHours(0, 0, 0, 0)
   const start = new Date(end)
   start.setDate(start.getDate() - days)
-  return RESPONSES.filter((r) => r.submittedAt >= start && r.submittedAt < end)
+  return all.filter((r) => r.submittedAt >= start && r.submittedAt < end)
 }
 
 export function pctDelta(
@@ -184,7 +91,7 @@ export interface DayBucket {
   tutors: number
 }
 
-export function dailyBuckets(days: RangeDays): DayBucket[] {
+export function dailyBuckets(all: SurveyResponse[], days: RangeDays): DayBucket[] {
   const buckets: DayBucket[] = []
   const now = new Date()
   for (let i = days - 1; i >= 0; i--) {
@@ -194,7 +101,7 @@ export function dailyBuckets(days: RangeDays): DayBucket[] {
     buckets.push({ day: 'SMTWTFS'[d.getDay()], date: d, students: 0, tutors: 0 })
   }
   const first = buckets[0].date
-  for (const r of RESPONSES) {
+  for (const r of all) {
     if (r.submittedAt < first) continue
     const idx = Math.floor((r.submittedAt.getTime() - first.getTime()) / 86_400_000)
     const b = buckets[idx]
@@ -205,12 +112,16 @@ export function dailyBuckets(days: RangeDays): DayBucket[] {
   return buckets
 }
 
-export function campusLeaderboard(days: RangeDays): { name: string; short: string; count: number }[] {
+export function facultyLeaderboard(
+  all: SurveyResponse[],
+  days: RangeDays,
+): { name: string; short: string; count: number }[] {
   const counts = new Map<string, { name: string; short: string; count: number }>()
-  for (const r of rangeResponses(days)) {
-    const entry = counts.get(r.campus) ?? { name: r.campusFull, short: r.campus, count: 0 }
+  for (const r of rangeResponses(all, days)) {
+    if (!r.faculty) continue
+    const entry = counts.get(r.faculty) ?? { name: r.faculty, short: r.facultyShort, count: 0 }
     entry.count++
-    counts.set(r.campus, entry)
+    counts.set(r.faculty, entry)
   }
   return [...counts.values()].sort((a, b) => b.count - a.count)
 }
@@ -233,21 +144,22 @@ export function formatNumber(n: number): string {
 
 /** Download an array of responses as a CSV file. */
 export function exportCsv(rows: SurveyResponse[], filename: string) {
-  const header = ['Name', 'Role', 'Campus', 'Department', 'Level', 'Focus', 'Email', 'Submitted', 'Completed']
+  const header = ['Role', 'School', 'Faculty', 'Department', 'Level', 'Focus', 'Rate', 'Format', 'Status', 'Submitted']
   const escape = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
   const lines = [
     header.join(','),
     ...rows.map((r) =>
       [
-        r.name,
         r.role,
-        r.campusFull,
+        r.school,
+        r.faculty,
         r.dept,
         r.level,
         r.focus,
-        r.email,
+        r.rate,
+        r.format,
+        r.completed ? 'Completed' : 'Partial',
         r.submittedAt.toISOString(),
-        r.completed ? 'Yes' : 'No',
       ]
         .map(escape)
         .join(','),
