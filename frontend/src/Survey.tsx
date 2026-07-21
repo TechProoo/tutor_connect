@@ -5,11 +5,48 @@ import './Survey.css'
 
 /* ---------- Shared option sets (verbatim from the Bells survey) ---------- */
 
-const COLLEGES = [
-  'College of Engineering (COLENG)',
-  'College of Environmental Sciences (COLENVS)',
-  'College of Management Sciences (COLMANS)',
-  'College of Natural & Applied Sciences (COLNAS)',
+const FACULTIES = [
+  'Faculty of Computing',
+  'Faculty of Basic Medical Sciences',
+  'Faculty of Nursing',
+  'Faculty of Arts',
+  'Faculty of Technology',
+  'Faculty of Social Management and Sciences',
+  'Faculty of Law',
+  'Faculty of Education',
+  'Faculty of Science',
+  'Faculty of Pharmacy',
+  'Faculty of Engineering',
+]
+const NIGERIAN_SCHOOLS = [
+  'Abia State University',
+  'Ahmadu Bello University',
+  'Afe Babalola University',
+  'Babcock University',
+  'Bayero University Kano',
+  'Bells University of Technology',
+  'Bowen University',
+  'Covenant University',
+  'Federal University of Technology, Akure',
+  'Federal University of Technology, Minna',
+  'Federal University of Technology, Owerri',
+  'Lagos State University',
+  'Nnamdi Azikiwe University',
+  'Obafemi Awolowo University',
+  'Olabisi Onabanjo University',
+  'Pan-Atlantic University',
+  'Redeemer’s University',
+  'University of Abuja',
+  'University of Benin',
+  'University of Calabar',
+  'University of Ibadan',
+  'University of Ilorin',
+  'University of Jos',
+  'University of Lagos',
+  'University of Nigeria, Nsukka',
+  'University of Port Harcourt',
+  'University of Uyo',
+  'Other Nigerian institution',
 ]
 const LEVELS = ['100L', '200L', '300L', '400L', '500L', 'MSC 1', 'MSC 2']
 const RATES = [
@@ -149,7 +186,7 @@ function Field({ label, optional, required, children }: FieldProps) {
   )
 }
 
-function CollegeSelect({
+function FacultySelect({
   value,
   onChange,
 }: {
@@ -157,16 +194,40 @@ function CollegeSelect({
   onChange: (v: string) => void
 }) {
   return (
-    <Field label="Which college are you in?" required>
+    <Field label="What faculty are you in?" required>
       <select
         className="sv-input sv-select"
         value={value}
         required
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Select your college</option>
-        {COLLEGES.map((c) => (
-          <option key={c}>{c}</option>
+        <option value="">Select your faculty</option>
+        {FACULTIES.map((faculty) => (
+          <option key={faculty}>{faculty}</option>
+        ))}
+      </select>
+    </Field>
+  )
+}
+
+function SchoolSelect({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <Field label="Which school do you attend?" required>
+      <select
+        className="sv-input sv-select"
+        value={value}
+        required
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Select your school</option>
+        {NIGERIAN_SCHOOLS.map((school) => (
+          <option key={school}>{school}</option>
         ))}
       </select>
     </Field>
@@ -178,7 +239,8 @@ function ThankYou({ onReset }: { onReset: () => void }) {
     <div className="sv-thanks">
       <div className="sv-thanks-emoji">🎓</div>
       <div className="sv-thanks-title">
-        Thank you! We'll be in touch via WhatsApp within 48 hours.
+        Thank you for filling out our survey. Your feedback will help us shape
+        TutorConnect.
       </div>
       <button type="button" className="sv-thanks-btn" onClick={onReset}>
         Submit another response
@@ -190,7 +252,8 @@ function ThankYou({ onReset }: { onReset: () => void }) {
 /* ---------- Form state ---------- */
 
 const blankStudent = {
-  college: '',
+  school: '',
+  faculty: '',
   dept: '',
   level: '',
   struggled: '',
@@ -207,7 +270,8 @@ const blankStudent = {
 }
 
 const blankTutor = {
-  college: '',
+  school: '',
+  faculty: '',
   dept: '',
   level: '',
   helped: '',
@@ -260,7 +324,8 @@ function Survey() {
     })
 
   const studentPct = pctOf([
-    student.college,
+    student.school,
+    student.faculty,
     student.dept,
     student.level,
     student.struggled,
@@ -274,7 +339,8 @@ function Survey() {
     student.format,
   ])
   const tutorPct = pctOf([
-    tutor.college,
+    tutor.school,
+    tutor.faculty,
     tutor.dept,
     tutor.level,
     tutor.helped,
@@ -459,9 +525,13 @@ function Survey() {
                 </div>
 
                 <Section step="01" title="About you">
-                  <CollegeSelect
-                    value={student.college}
-                    onChange={setS('college')}
+                  <SchoolSelect
+                    value={student.school}
+                    onChange={setS('school')}
+                  />
+                  <FacultySelect
+                    value={student.faculty}
+                    onChange={setS('faculty')}
                   />
                   <Field label="Department" required>
                     <input
@@ -629,9 +699,13 @@ function Survey() {
                 </div>
 
                 <Section step="01" title="About you">
-                  <CollegeSelect
-                    value={tutor.college}
-                    onChange={setT('college')}
+                  <SchoolSelect
+                    value={tutor.school}
+                    onChange={setT('school')}
+                  />
+                  <FacultySelect
+                    value={tutor.faculty}
+                    onChange={setT('faculty')}
                   />
                   <Field label="Department" required>
                     <input

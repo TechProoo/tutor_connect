@@ -47,8 +47,9 @@ function Landing() {
               on your campus
             </h1>
             <p className="tc-subhead">
-              Tell us how you study, what support you need, and what you can
-              afford. Your feedback will shape Tutor Connect before we launch.
+              Help us build Tutor Connect by sharing your feedback. Whether
+              you’re looking for a tutor or ready to earn by teaching others,
+              your responses will help shape the platform.
             </p>
             <div className="tc-cta-row">
               <a href="#/survey" className="tc-btn-primary">
@@ -59,13 +60,8 @@ function Landing() {
                 <div className="tc-stat-label">your campus</div>
               </div>
             </div>
-            <div
-              className="tc-campuses"
-              aria-label="Listening to students at Bells University of Technology, UNILAG, and OAU"
-            >
-              <span title="Bells University of Technology">BELLS UNIVERSITY OF TECH.</span>
-              <span>UNILAG</span>
-              <span>OAU</span>
+            <div className="tc-campuses">
+              <span>Built from real student insights.</span>
             </div>
           </div>
 

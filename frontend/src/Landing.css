@@ -713,6 +713,10 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 860px) {
+  .tc-nav-actions {
+    display: none;
+  }
+
   .tc-frame {
     padding: 20px 20px 40px;
   }
