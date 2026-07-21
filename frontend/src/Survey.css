@@ -406,6 +406,12 @@
   color: #8497aa;
 }
 
+.sv-req {
+  color: #f47b20;
+  font-weight: 800;
+  margin-left: 3px;
+}
+
 .sv-input {
   width: 100%;
   padding: 12px 14px;
@@ -483,6 +489,28 @@ textarea.sv-input {
   color: #f47b20;
   border-color: #f47b20;
   box-shadow: 0 4px 12px -6px rgba(244, 123, 32, 0.5);
+}
+
+.sv-chip-multi {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sv-chip-check {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.sv-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.sv-chip:disabled:hover {
+  border-color: #e5eaf0;
+  transform: none;
 }
 
 /* ---------- Submit ---------- */

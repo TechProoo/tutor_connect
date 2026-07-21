@@ -3,17 +3,41 @@ import type { FormEvent } from 'react'
 import tcIcon from './assets/tc-icon.png'
 import './Survey.css'
 
+/* ---------- Shared option sets (verbatim from the Bells survey) ---------- */
+
+const COLLEGES = [
+  'College of Engineering (COLENG)',
+  'College of Environmental Sciences (COLENVS)',
+  'College of Management Sciences (COLMANS)',
+  'College of Natural & Applied Sciences (COLNAS)',
+]
+const LEVELS = ['100L', '200L', '300L', '400L', '500L', 'MSC 1', 'MSC 2']
+const RATES = [
+  'Under ₦1,000',
+  '₦1,000–₦2,000',
+  '₦2,000–₦3,000',
+  '₦3,000–₦5,000',
+  'Above ₦5,000',
+]
+const FORMATS = ['Physical tutorials', 'Online tutorials', 'Both']
+
+/* ---------- Reusable pieces ---------- */
+
 type ChipGroupProps = {
   label: string
+  required?: boolean
   options: string[]
   value: string
   onSelect: (v: string) => void
 }
 
-function ChipGroup({ label, options, value, onSelect }: ChipGroupProps) {
+function ChipGroup({ label, required, options, value, onSelect }: ChipGroupProps) {
   return (
     <div className="sv-group">
-      <span className="sv-label">{label}</span>
+      <span className="sv-label">
+        {label}
+        {required && <span className="sv-req">*</span>}
+      </span>
       <div className="sv-chips">
         {options.map((o) => (
           <button
@@ -25,6 +49,50 @@ function ChipGroup({ label, options, value, onSelect }: ChipGroupProps) {
             {o}
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+type MultiChipGroupProps = {
+  label: string
+  hint?: string
+  options: string[]
+  values: string[]
+  max?: number
+  onToggle: (v: string) => void
+}
+
+function MultiChipGroup({
+  label,
+  hint,
+  options,
+  values,
+  max,
+  onToggle,
+}: MultiChipGroupProps) {
+  const atMax = max !== undefined && values.length >= max
+  return (
+    <div className="sv-group">
+      <span className="sv-label">
+        {label} {hint && <span className="sv-optional">{hint}</span>}
+      </span>
+      <div className="sv-chips">
+        {options.map((o) => {
+          const active = values.includes(o)
+          return (
+            <button
+              key={o}
+              type="button"
+              disabled={!active && atMax}
+              className={`sv-chip sv-chip-multi${active ? ' sv-chip-active' : ''}`}
+              onClick={() => onToggle(o)}
+            >
+              {active && <span className="sv-chip-check">✓</span>}
+              {o}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -64,23 +132,24 @@ function Progress({ value }: { value: number }) {
 type FieldProps = {
   label: string
   optional?: boolean
+  required?: boolean
   children: React.ReactNode
 }
 
-function Field({ label, optional, children }: FieldProps) {
+function Field({ label, optional, required, children }: FieldProps) {
   return (
     <label className="sv-field">
       <span className="sv-label">
-        {label} {optional && <span className="sv-optional">(optional)</span>}
+        {label}
+        {required && <span className="sv-req">*</span>}
+        {optional && <span className="sv-optional">(optional)</span>}
       </span>
       {children}
     </label>
   )
 }
 
-const HEARD_OPTIONS = ['WhatsApp', 'Friend', 'Notice Board', 'Social Media', 'Other']
-
-function HeardSelect({
+function CollegeSelect({
   value,
   onChange,
 }: {
@@ -88,15 +157,16 @@ function HeardSelect({
   onChange: (v: string) => void
 }) {
   return (
-    <Field label="How did you hear about TutorConnect?">
+    <Field label="Which college are you in?" required>
       <select
         className="sv-input sv-select"
         value={value}
+        required
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Select one</option>
-        {HEARD_OPTIONS.map((o) => (
-          <option key={o}>{o}</option>
+        <option value="">Select your college</option>
+        {COLLEGES.map((c) => (
+          <option key={c}>{c}</option>
         ))}
       </select>
     </Field>
@@ -117,31 +187,49 @@ function ThankYou({ onReset }: { onReset: () => void }) {
   )
 }
 
+/* ---------- Form state ---------- */
+
 const blankStudent = {
-  name: '',
-  campus: '',
+  college: '',
   dept: '',
-  subjects: '',
-  frequency: '',
+  level: '',
+  struggled: '',
+  courses: [] as string[],
+  runto: '',
+  wished: '',
+  woulduse: '',
+  rate: '',
+  trust: [] as string[],
+  timing: '',
   format: '',
-  pay: '',
-  heard: '',
-  comments: '',
+  feature: '',
+  suggestions: '',
 }
 
 const blankTutor = {
-  name: '',
-  campus: '',
+  college: '',
   dept: '',
-  subjects: '',
-  cgpa: '',
-  hours: '',
-  format: '',
+  level: '',
+  helped: '',
+  canteach: '',
+  interested: '',
+  why: [] as string[],
   earn: '',
-  whatsapp: '',
-  heard: '',
-  other: '',
+  format: '',
+  stopyou: '',
+  join: '',
+  feature: '',
+  suggestions: '',
 }
+
+type StringKeys<T> = {
+  [K in keyof T]: T[K] extends string ? K : never
+}[keyof T]
+
+const filled = (vals: Array<string | string[]>) =>
+  vals.filter((v) => (Array.isArray(v) ? v.length > 0 : v.trim() !== '')).length
+const pctOf = (vals: Array<string | string[]>) =>
+  Math.round((filled(vals) / vals.length) * 100)
 
 function Survey() {
   const [tab, setTab] = useState<'student' | 'tutor'>('student')
@@ -150,35 +238,52 @@ function Survey() {
   const [studentSubmitted, setStudentSubmitted] = useState(false)
   const [tutorSubmitted, setTutorSubmitted] = useState(false)
 
-  const setS = (field: keyof typeof blankStudent) => (v: string) =>
+  const setS = (field: StringKeys<typeof blankStudent>) => (v: string) =>
     setStudent((s) => ({ ...s, [field]: v }))
-  const setT = (field: keyof typeof blankTutor) => (v: string) =>
+  const setT = (field: StringKeys<typeof blankTutor>) => (v: string) =>
     setTutor((t) => ({ ...t, [field]: v }))
 
-  const pct = (fields: string[]) =>
-    Math.round((fields.filter((f) => f.trim() !== '').length / fields.length) * 100)
+  const toggleStudent =
+    (field: 'courses' | 'trust', max?: number) => (v: string) =>
+      setStudent((s) => {
+        const arr = s[field]
+        if (arr.includes(v)) return { ...s, [field]: arr.filter((x) => x !== v) }
+        if (max && arr.length >= max) return s
+        return { ...s, [field]: [...arr, v] }
+      })
 
-  const studentPct = pct([
-    student.name,
-    student.campus,
+  const toggleTutor = (field: 'why') => (v: string) =>
+    setTutor((t) => {
+      const arr = t[field]
+      if (arr.includes(v)) return { ...t, [field]: arr.filter((x) => x !== v) }
+      return { ...t, [field]: [...arr, v] }
+    })
+
+  const studentPct = pctOf([
+    student.college,
     student.dept,
-    student.subjects,
-    student.frequency,
+    student.level,
+    student.struggled,
+    student.courses,
+    student.runto,
+    student.wished,
+    student.woulduse,
+    student.rate,
+    student.trust,
+    student.timing,
     student.format,
-    student.pay,
-    student.heard,
   ])
-  const tutorPct = pct([
-    tutor.name,
-    tutor.campus,
+  const tutorPct = pctOf([
+    tutor.college,
     tutor.dept,
-    tutor.subjects,
-    tutor.cgpa,
-    tutor.hours,
-    tutor.format,
+    tutor.level,
+    tutor.helped,
+    tutor.canteach,
+    tutor.interested,
+    tutor.why,
     tutor.earn,
-    tutor.whatsapp,
-    tutor.heard,
+    tutor.format,
+    tutor.join,
   ])
 
   const submitStudent = (e: FormEvent) => {
@@ -240,8 +345,7 @@ function Survey() {
           <a href="#" className="sv-brand">
             <img src={tcIcon} alt="" className="sv-brand-icon" />
             <span>
-              <span className="sv-brand-white">Tutor</span>
-              {' '}
+              <span className="sv-brand-white">Tutor</span>{' '}
               <span className="sv-brand-orange">Connect</span>
             </span>
           </a>
@@ -256,7 +360,11 @@ function Survey() {
               Help us build something{' '}
               <span className="sv-underline">
                 made for you
-                <svg viewBox="0 0 220 20" className="sv-underline-swoosh" aria-hidden="true">
+                <svg
+                  viewBox="0 0 220 20"
+                  className="sv-underline-swoosh"
+                  aria-hidden="true"
+                >
                   <path
                     d="M6 14 C60 6, 150 4, 214 10"
                     fill="none"
@@ -351,90 +459,147 @@ function Survey() {
                 </div>
 
                 <Section step="01" title="About you">
-                  <div className="sv-row">
-                    <Field label="Full Name">
-                      <input
-                        className="sv-input"
-                        placeholder="e.g. Amaka Obi"
-                        value={student.name}
-                        onChange={(e) => setS('name')(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="University / Campus">
-                      <input
-                        className="sv-input"
-                        placeholder="e.g. University of Lagos"
-                        value={student.campus}
-                        onChange={(e) => setS('campus')(e.target.value)}
-                      />
-                    </Field>
-                  </div>
-
-                  <Field label="Department & Level">
+                  <CollegeSelect
+                    value={student.college}
+                    onChange={setS('college')}
+                  />
+                  <Field label="Department" required>
                     <input
                       className="sv-input"
-                      placeholder="e.g. Computer Science, 300L"
+                      placeholder="e.g. Mechanical Engineering"
+                      required
                       value={student.dept}
                       onChange={(e) => setS('dept')(e.target.value)}
                     />
                   </Field>
+                  <ChipGroup
+                    label="Level"
+                    options={LEVELS}
+                    value={student.level}
+                    onSelect={setS('level')}
+                  />
                 </Section>
 
-                <Section step="02" title="Your study needs">
-                  <Field label="Which subjects are you currently struggling with?">
-                    <textarea
-                      className="sv-input"
-                      rows={3}
-                      placeholder="e.g. Calculus, Organic Chemistry…"
-                      value={student.subjects}
-                      onChange={(e) => setS('subjects')(e.target.value)}
-                    />
-                  </Field>
-
+                <Section step="02" title="Your experience">
                   <ChipGroup
-                    label="How often do you need tutoring help?"
+                    label="Have you ever struggled with a course?"
+                    options={['Yes 😂', 'Yes 😭', 'No']}
+                    value={student.struggled}
+                    onSelect={setS('struggled')}
+                  />
+                  <MultiChipGroup
+                    label="Which course(s) stressed you the most?"
+                    hint="(select all that apply)"
                     options={[
-                      'Once a week',
-                      '2–3 times a week',
-                      'Only before exams',
-                      "Anytime I'm stuck",
+                      'Engineering Mathematics',
+                      'Calculus',
+                      'Architectural Design Studio',
+                      'Surveying',
+                      'Fluid Mechanics',
+                      'Financial Accounting',
+                      'Microeconomics',
+                      'Other',
                     ]}
-                    value={student.frequency}
-                    onSelect={setS('frequency')}
+                    values={student.courses}
+                    onToggle={toggleStudent('courses')}
                   />
                   <ChipGroup
-                    label="What format do you prefer?"
+                    label="When you're confused in class, who do you normally run to?"
+                    required
                     options={[
-                      '1-on-1 with a tutor',
-                      'Small group session',
-                      'Either works for me',
+                      'My lecturer',
+                      'YouTube',
+                      'My friends',
+                      'ChatGPT/AI',
+                      'Private tutor',
+                      'I just read alone',
+                      'My course mates',
                     ]}
+                    value={student.runto}
+                    onSelect={setS('runto')}
+                  />
+                  <ChipGroup
+                    label="Have you ever wished someone could explain a course better than your lecturer?"
+                    options={['Yes', 'Sometimes', 'No']}
+                    value={student.wished}
+                    onSelect={setS('wished')}
+                  />
+                </Section>
+
+                <Section step="03" title="About the platform">
+                  <ChipGroup
+                    label="If there was a platform where you could easily find trusted student tutors, would you use it?"
+                    options={[
+                      'Definitely',
+                      'Probably',
+                      'Maybe',
+                      'Not really',
+                      'Never',
+                    ]}
+                    value={student.woulduse}
+                    onSelect={setS('woulduse')}
+                  />
+                  <ChipGroup
+                    label="How much would you realistically pay for a one-hour tutorial?"
+                    options={RATES}
+                    value={student.rate}
+                    onSelect={setS('rate')}
+                  />
+                  <MultiChipGroup
+                    label="What would make you trust a tutor?"
+                    hint="(check up to 3)"
+                    max={3}
+                    options={[
+                      'CGPA',
+                      'Department',
+                      'Recommendations',
+                      'Reviews',
+                      'Affordability',
+                      'Friendliness',
+                      'Explanation quality',
+                    ]}
+                    values={student.trust}
+                    onToggle={toggleStudent('trust', 3)}
+                  />
+                  <ChipGroup
+                    label="During which period would you need tutorials the most?"
+                    options={[
+                      'Beginning of semester',
+                      'Before CA',
+                      'Before Exams',
+                      'Throughout the semester',
+                    ]}
+                    value={student.timing}
+                    onSelect={setS('timing')}
+                  />
+                  <ChipGroup
+                    label="Would you prefer"
+                    options={FORMATS}
                     value={student.format}
                     onSelect={setS('format')}
                   />
-                  <ChipGroup
-                    label="How much are you willing to pay per session?"
-                    options={[
-                      '₦1,000–₦2,000',
-                      '₦2,000–₦3,500',
-                      '₦3,500–₦5,000',
-                      'Whatever is fair',
-                    ]}
-                    value={student.pay}
-                    onSelect={setS('pay')}
-                  />
                 </Section>
 
-                <Section step="03" title="Finishing up">
-                  <HeardSelect value={student.heard} onChange={setS('heard')} />
-
-                  <Field label="Any other comments or requests?" optional>
+                <Section step="04" title="Your ideas">
+                  <Field
+                    label="If Tutor Connect existed today, what feature would make you use it?"
+                    optional
+                  >
                     <textarea
                       className="sv-input"
                       rows={2}
-                      placeholder="Tell us anything…"
-                      value={student.comments}
-                      onChange={(e) => setS('comments')(e.target.value)}
+                      placeholder="Tell us the one thing…"
+                      value={student.feature}
+                      onChange={(e) => setS('feature')(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Any other suggestions?" optional>
+                    <textarea
+                      className="sv-input"
+                      rows={2}
+                      placeholder="Anything else on your mind…"
+                      value={student.suggestions}
+                      onChange={(e) => setS('suggestions')(e.target.value)}
                     />
                   </Field>
                 </Section>
@@ -464,101 +629,114 @@ function Survey() {
                 </div>
 
                 <Section step="01" title="About you">
-                  <div className="sv-row">
-                    <Field label="Full Name">
-                      <input
-                        className="sv-input"
-                        placeholder="e.g. Tunde Bello"
-                        value={tutor.name}
-                        onChange={(e) => setT('name')(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="University / Campus">
-                      <input
-                        className="sv-input"
-                        placeholder="e.g. University of Ibadan"
-                        value={tutor.campus}
-                        onChange={(e) => setT('campus')(e.target.value)}
-                      />
-                    </Field>
-                  </div>
-
-                  <Field label="Department & Level">
+                  <CollegeSelect
+                    value={tutor.college}
+                    onChange={setT('college')}
+                  />
+                  <Field label="Department" required>
                     <input
                       className="sv-input"
-                      placeholder="e.g. Mechanical Engineering, 500L"
+                      placeholder="e.g. Computer Science"
+                      required
                       value={tutor.dept}
                       onChange={(e) => setT('dept')(e.target.value)}
                     />
                   </Field>
-                </Section>
-
-                <Section step="02" title="Your tutoring">
-                  <Field label="What subjects can you confidently tutor?">
-                    <textarea
-                      className="sv-input"
-                      rows={3}
-                      placeholder="e.g. Physics, Statistics, Python…"
-                      value={tutor.subjects}
-                      onChange={(e) => setT('subjects')(e.target.value)}
-                    />
-                  </Field>
-
                   <ChipGroup
-                    label="What is your current CGPA or grade class?"
-                    options={[
-                      'First Class',
-                      'Second Class Upper',
-                      'Second Class Lower',
-                      'Other',
-                    ]}
-                    value={tutor.cgpa}
-                    onSelect={setT('cgpa')}
-                  />
-                  <ChipGroup
-                    label="How many hours per week can you tutor?"
-                    options={['1–3 hrs', '4–6 hrs', '7–10 hrs', '10+ hrs']}
-                    value={tutor.hours}
-                    onSelect={setT('hours')}
-                  />
-                  <ChipGroup
-                    label="What session format do you prefer?"
-                    options={['1-on-1 only', 'Group sessions only', 'Both']}
-                    value={tutor.format}
-                    onSelect={setT('format')}
-                  />
-                  <ChipGroup
-                    label="How much would you like to earn per session?"
-                    options={[
-                      '₦2,000–₦3,000',
-                      '₦3,000–₦5,000',
-                      '₦5,000+',
-                      'Open to discussion',
-                    ]}
-                    value={tutor.earn}
-                    onSelect={setT('earn')}
+                    label="Level"
+                    options={LEVELS}
+                    value={tutor.level}
+                    onSelect={setT('level')}
                   />
                 </Section>
 
-                <Section step="03" title="Finishing up">
-                  <Field label="Do you have a WhatsApp number we can reach you on?">
-                    <input
-                      className="sv-input"
-                      placeholder="e.g. 0803 123 4567"
-                      value={tutor.whatsapp}
-                      onChange={(e) => setT('whatsapp')(e.target.value)}
-                    />
-                  </Field>
-
-                  <HeardSelect value={tutor.heard} onChange={setT('heard')} />
-
-                  <Field label="Anything else you want us to know?" optional>
+                <Section step="02" title="Your teaching">
+                  <ChipGroup
+                    label="Have you ever helped someone understand a course before?"
+                    options={['Yes', 'Many Times', 'Not Really']}
+                    value={tutor.helped}
+                    onSelect={setT('helped')}
+                  />
+                  <Field label="Which courses can you confidently teach?" optional>
                     <textarea
                       className="sv-input"
                       rows={2}
-                      placeholder="Tell us anything…"
-                      value={tutor.other}
-                      onChange={(e) => setT('other')(e.target.value)}
+                      placeholder="e.g. Engineering Mathematics, Calculus, Python…"
+                      value={tutor.canteach}
+                      onChange={(e) => setT('canteach')(e.target.value)}
+                    />
+                  </Field>
+                  <ChipGroup
+                    label="Would you be interested in making extra money by tutoring?"
+                    required
+                    options={['Yes', 'Maybe', 'No']}
+                    value={tutor.interested}
+                    onSelect={setT('interested')}
+                  />
+                  <MultiChipGroup
+                    label="Why would you like to tutor?"
+                    hint="(check all that apply)"
+                    options={[
+                      'Extra Cash',
+                      'I enjoy teaching',
+                      'To build experience',
+                      'To meet people',
+                    ]}
+                    values={tutor.why}
+                    onToggle={toggleTutor('why')}
+                  />
+                </Section>
+
+                <Section step="03" title="The details">
+                  <ChipGroup
+                    label="How much would you expect to earn per hour?"
+                    options={RATES}
+                    value={tutor.earn}
+                    onSelect={setT('earn')}
+                  />
+                  <ChipGroup
+                    label="Would you prefer"
+                    options={FORMATS}
+                    value={tutor.format}
+                    onSelect={setT('format')}
+                  />
+                  <Field label="What would stop you from becoming a tutor?" optional>
+                    <textarea
+                      className="sv-input"
+                      rows={2}
+                      placeholder="e.g. Time, workload, unsure how to start…"
+                      value={tutor.stopyou}
+                      onChange={(e) => setT('stopyou')(e.target.value)}
+                    />
+                  </Field>
+                  <ChipGroup
+                    label="If Tutor Connect launched at Bells, would you join as a tutor?"
+                    options={['Definitely', 'Probably', 'Maybe', 'No']}
+                    value={tutor.join}
+                    onSelect={setT('join')}
+                  />
+                </Section>
+
+                <Section step="04" title="Your ideas">
+                  <Field
+                    label="If Tutor Connect existed today, what feature would make you use it?"
+                    optional
+                  >
+                    <textarea
+                      className="sv-input"
+                      rows={2}
+                      placeholder="Tell us the one thing…"
+                      value={tutor.feature}
+                      onChange={(e) => setT('feature')(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Any other suggestions?" optional>
+                    <textarea
+                      className="sv-input"
+                      rows={2}
+                      placeholder="Anything else on your mind…"
+                      value={tutor.suggestions}
+                      onChange={(e) => setT('suggestions')(e.target.value)}
                     />
                   </Field>
                 </Section>
