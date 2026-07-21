@@ -3,7 +3,7 @@
 const API_URL: string =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.PROD
-    ? 'https://tutorconnect-backend.onrender.com'
+    ? 'https://tutor-connect-e57d.onrender.com'
     : 'http://localhost:3001')
 
 /** Drop empty strings / empty arrays so optional fields stay unset. */
