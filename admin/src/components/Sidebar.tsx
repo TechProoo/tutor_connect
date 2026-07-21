@@ -17,6 +17,10 @@ interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
   live: boolean
+  /** Mobile drawer mode: fixed overlay that slides in/out. */
+  isMobile?: boolean
+  open?: boolean
+  onClose?: () => void
 }
 
 const labelAnim = {
@@ -26,10 +30,42 @@ const labelAnim = {
   transition: { duration: 0.18 },
 }
 
-export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: SidebarProps) {
+export function Sidebar({
+  section,
+  onNavigate,
+  collapsed,
+  onToggle,
+  live,
+  isMobile = false,
+  open = false,
+  onClose,
+}: SidebarProps) {
+  // On mobile the drawer always shows full-width labels (never the collapsed rail).
+  const showLabels = isMobile ? true : !collapsed
+
+  const desktopStyle: React.CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    height: '100vh',
+  }
+  const mobileStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    height: '100vh',
+    width: 258,
+    zIndex: 60,
+    boxShadow: open ? '0 0 40px rgba(0,0,0,.35)' : 'none',
+  }
+
+  const navClick = (label: Section) => {
+    onNavigate(label)
+    if (isMobile) onClose?.()
+  }
+
   return (
     <motion.aside
-      animate={{ width: collapsed ? 78 : 230 }}
+      animate={isMobile ? { x: open ? 0 : -272 } : { width: collapsed ? 78 : 230 }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       style={{
         flexShrink: 0,
@@ -39,22 +75,20 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
         overflow: 'hidden',
+        ...(isMobile ? mobileStyle : desktopStyle),
       }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
+          justifyContent: showLabels ? 'space-between' : 'center',
           padding: '4px 4px 22px',
         }}
       >
         <AnimatePresence initial={false}>
-          {!collapsed && (
+          {showLabels && (
             <motion.div
               {...labelAnim}
               style={{
@@ -81,8 +115,8 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
         </AnimatePresence>
         <motion.button
           type="button"
-          onClick={onToggle}
-          title="Toggle sidebar"
+          onClick={isMobile ? onClose : onToggle}
+          title={isMobile ? 'Close menu' : 'Toggle sidebar'}
           whileHover={{ background: 'rgba(255,255,255,.16)' }}
           whileTap={{ scale: 0.92 }}
           style={{
@@ -99,7 +133,7 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
             flexShrink: 0,
           }}
         >
-          <Icon name={collapsed ? 'chevR' : 'chevL'} />
+          <Icon name={isMobile ? 'close' : collapsed ? 'chevR' : 'chevL'} />
         </motion.button>
       </div>
 
@@ -110,14 +144,14 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
             key={n.label}
             type="button"
             title={n.label}
-            onClick={() => onNavigate(n.label)}
+            onClick={() => navClick(n.label)}
             whileHover={active ? undefined : { background: 'rgba(255,255,255,.08)', color: '#fff' }}
             whileTap={{ scale: 0.97 }}
             style={{
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
+              justifyContent: showLabels ? 'flex-start' : 'center',
               gap: 11,
               textAlign: 'left',
               cursor: 'pointer',
@@ -152,7 +186,7 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
               <Icon name={n.icon} />
             </span>
             <AnimatePresence initial={false}>
-              {!collapsed && (
+              {showLabels && (
                 <motion.span {...labelAnim} style={{ position: 'relative' }}>
                   {n.label}
                 </motion.span>
@@ -163,7 +197,7 @@ export function Sidebar({ section, onNavigate, collapsed, onToggle, live }: Side
       })}
 
       <AnimatePresence initial={false}>
-        {!collapsed && (
+        {showLabels && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

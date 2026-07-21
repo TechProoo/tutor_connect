@@ -104,8 +104,85 @@ textarea {
   color: var(--muted);
 }
 
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  padding: 26px 30px 44px;
+}
+
+/* Mobile top bar (only rendered below 820px) */
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 6px rgba(26, 58, 92, 0.05);
+}
+
+.admin-hamburger {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--navy);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-hamburger:active {
+  background: var(--bg);
+}
+
+.admin-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-right: auto;
+}
+
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(15, 25, 40, 0.5);
+  backdrop-filter: blur(1px);
+}
+
 @media (max-width: 900px) {
   .tc-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-main {
+    padding: 18px 16px 40px;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 460px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }

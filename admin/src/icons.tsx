@@ -46,6 +46,8 @@ const PATHS = {
   check: <path d="M20 6 9 17l-5-5" />,
   chevL: <path d="M15 18l-6-6 6-6" />,
   chevR: <path d="M9 18l6-6-6-6" />,
+  close: <path d="M18 6 6 18M6 6l12 12" />,
+  menu: <path d="M3 6h18M3 12h18M3 18h18" />,
   download: (
     <>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

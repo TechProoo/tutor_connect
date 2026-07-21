@@ -6,16 +6,33 @@ import { Overview } from './pages/Overview'
 import { People } from './pages/People'
 import { Faculties } from './pages/Faculties'
 import { Settings } from './pages/Settings'
+import { Icon } from './icons'
 import { loadSettings, saveSettings, type AdminSettings } from './settings'
 import { loadResponses, setAdminKey, getAdminKey, UnauthorizedError } from './api'
 import type { SurveyResponse } from './data'
 
 type Phase = 'loading' | 'locked' | 'ready' | 'error'
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia(query)
+    const handler = () => setMatches(mql.matches)
+    handler()
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
+
 function App() {
   const [section, setSection] = useState<Section>('Overview')
   const [collapsed, setCollapsed] = useState(false)
   const [settings, setSettings] = useState<AdminSettings>(loadSettings)
+  const isMobile = useMediaQuery('(max-width: 820px)')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [responses, setResponses] = useState<SurveyResponse[]>([])
@@ -48,33 +65,86 @@ function App() {
     return <Gate phase={phase} error={loadError} onUnlock={load} onRetry={load} />
   }
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar
-        section={section}
-        onNavigate={setSection}
-        collapsed={collapsed}
-        onToggle={() => setCollapsed((c) => !c)}
-        live={settings.live}
-      />
+  const navigate = (s: Section) => {
+    setSection(s)
+    setMobileNavOpen(false)
+  }
 
-      <main style={{ flex: 1, minWidth: 0, padding: '26px 30px 44px' }}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={section}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+  return (
+    <div style={{ minHeight: '100vh' }}>
+      {isMobile && (
+        <header className="admin-topbar">
+          <button
+            type="button"
+            className="admin-hamburger"
+            aria-label="Open menu"
+            onClick={() => setMobileNavOpen(true)}
           >
-            {section === 'Overview' && <Overview responses={responses} onRefresh={load} />}
-            {section === 'Students' && <People role="Student" responses={responses} />}
-            {section === 'Tutors' && <People role="Tutor" responses={responses} />}
-            {section === 'Faculties' && <Faculties responses={responses} />}
-            {section === 'Settings' && <Settings settings={settings} onChange={patchSettings} />}
-          </motion.div>
+            <Icon name="menu" size={22} />
+          </button>
+          <div className="admin-topbar-brand">
+            <img src="/tc-icon.png" alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+            <span>
+              <span style={{ color: 'var(--navy)' }}>Tutor</span>
+              <span style={{ color: 'var(--orange)' }}>Connect</span>
+            </span>
+          </div>
+          <span
+            title={settings.live ? 'Accepting responses' : 'Responses paused'}
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: '50%',
+              background: settings.live ? '#3ddc84' : '#d64545',
+              boxShadow: settings.live ? '0 0 0 3px rgba(61,220,132,.22)' : '0 0 0 3px rgba(214,69,69,.2)',
+            }}
+          />
+        </header>
+      )}
+
+      <div style={{ display: 'flex', minHeight: isMobile ? 'auto' : '100vh' }}>
+        <Sidebar
+          section={section}
+          onNavigate={navigate}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+          live={settings.live}
+          isMobile={isMobile}
+          open={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+        />
+
+        <AnimatePresence>
+          {isMobile && mobileNavOpen && (
+            <motion.div
+              className="admin-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileNavOpen(false)}
+            />
+          )}
         </AnimatePresence>
-      </main>
+
+        <main className="admin-main">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={section}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {section === 'Overview' && <Overview responses={responses} onRefresh={load} />}
+              {section === 'Students' && <People role="Student" responses={responses} />}
+              {section === 'Tutors' && <People role="Tutor" responses={responses} />}
+              {section === 'Faculties' && <Faculties responses={responses} />}
+              {section === 'Settings' && <Settings settings={settings} onChange={patchSettings} />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
   )
 }
