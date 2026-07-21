@@ -1,0 +1,19 @@
+# Netlify build & deploy config for the Tutor Connect frontend.
+# The Vite app lives in the frontend/ subdirectory, so we point the
+# build "base" there; publish is resolved relative to that base.
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: any path that isn't a real file is served index.html
+# with a 200 (not a redirect), so deep links and page reloads on routes
+# like /survey resolve to the app instead of a 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
