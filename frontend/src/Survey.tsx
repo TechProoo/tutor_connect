@@ -18,6 +18,10 @@ const FACULTIES = [
   'Faculty of Science',
   'Faculty of Pharmacy',
   'Faculty of Engineering',
+  'College of Engineering (COLENG)',
+  'College of Environmental Sciences (COLENVS)',
+  'College of Management Sciences (COLMANS)',
+  'College of Natural & Applied Sciences (COLNAS)',
 ]
 const NIGERIAN_SCHOOLS = [
   'Abia State University',
@@ -41,6 +45,7 @@ const NIGERIAN_SCHOOLS = [
   'University of Benin',
   'University of Calabar',
   'University of Ibadan',
+  'University of Ilesa',
   'University of Ilorin',
   'University of Jos',
   'University of Lagos',
@@ -195,14 +200,14 @@ function FacultySelect({
   onChange: (v: string) => void
 }) {
   return (
-    <Field label="What faculty are you in?" required>
+    <Field label="What faculty or college are you in?" required>
       <select
         className="sv-input sv-select"
         value={value}
         required
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Select your faculty</option>
+        <option value="">Select your faculty or college</option>
         {FACULTIES.map((faculty) => (
           <option key={faculty}>{faculty}</option>
         ))}
