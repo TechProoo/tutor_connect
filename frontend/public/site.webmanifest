@@ -1,0 +1,16 @@
+{
+  "name": "Tutor Connect",
+  "short_name": "TutorConnect",
+  "description": "Find trusted student tutors on your own campus — by subject, level, and budget.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a3a5c",
+  "icons": [
+    {
+      "src": "/tc-icon.png",
+      "sizes": "475x400",
+      "type": "image/png"
+    }
+  ]
+}
