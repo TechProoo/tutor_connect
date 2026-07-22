@@ -119,6 +119,11 @@ function base(
   }
 }
 
+/** Normalise a raw field (null / string / string[]) to a display string. */
+function val(x: string | null | string[]): string {
+  return Array.isArray(x) ? x.join(', ') : (x ?? '')
+}
+
 function mapStudent(r: RawStudent): SurveyResponse {
   const ratio = answeredRatio([
     r.level, r.struggled, r.courses, r.runTo, r.wished, r.wouldUse,
@@ -130,6 +135,23 @@ function mapStudent(r: RawStudent): SurveyResponse {
     rate: r.rate ?? '',
     format: r.format ?? '',
     completed: ratio >= 2 / 3,
+    answers: [
+      { label: 'School / University', value: val(r.school) },
+      { label: 'Faculty or college', value: val(r.faculty) },
+      { label: 'Department', value: val(r.department) },
+      { label: 'Level', value: val(r.level) },
+      { label: 'Ever struggled with a course?', value: val(r.struggled) },
+      { label: 'Most challenging courses', value: val(r.courses) },
+      { label: 'Who they run to when confused', value: val(r.runTo) },
+      { label: 'Wished a course was explained better?', value: val(r.wished) },
+      { label: 'Would use a trusted tutor platform?', value: val(r.wouldUse) },
+      { label: 'Would pay per one-hour session', value: val(r.rate) },
+      { label: 'What makes them trust a tutor', value: val(r.trust) },
+      { label: 'When they need tutorials most', value: val(r.timing) },
+      { label: 'Preferred format', value: val(r.format) },
+      { label: 'Feature that would make them use it', value: val(r.feature), freeText: true },
+      { label: 'Phone / WhatsApp (launch notice)', value: val(r.suggestions) },
+    ],
   }
 }
 
@@ -144,6 +166,22 @@ function mapTutor(r: RawTutor): SurveyResponse {
     rate: r.earn ?? '',
     format: r.format ?? '',
     completed: ratio >= 2 / 3,
+    answers: [
+      { label: 'School / University', value: val(r.school) },
+      { label: 'Faculty or college', value: val(r.faculty) },
+      { label: 'Department', value: val(r.department) },
+      { label: 'Level', value: val(r.level) },
+      { label: 'Helped someone understand a course before?', value: val(r.helped) },
+      { label: 'Courses they can confidently teach', value: val(r.canTeach), freeText: true },
+      { label: 'Interested in earning by tutoring?', value: val(r.interested) },
+      { label: 'Why they want to tutor', value: val(r.why) },
+      { label: 'Expected earning per hour', value: val(r.earn) },
+      { label: 'Preferred format', value: val(r.format) },
+      { label: 'What would stop them from tutoring', value: val(r.stopYou), freeText: true },
+      { label: 'Would join Tutor Connect at Bells?', value: val(r.join) },
+      { label: 'Feature that would make them use it', value: val(r.feature), freeText: true },
+      { label: 'Phone / WhatsApp (launch notice)', value: val(r.suggestions) },
+    ],
   }
 }
 

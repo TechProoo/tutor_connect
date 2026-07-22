@@ -1,6 +1,84 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motion'
 import { Icon, type IconName } from '../icons'
+import { timeAgo, type SurveyResponse } from '../data'
+
+// ---------------------------------------------------------------------------
+// Response detail modal — read one person's full survey answers
+// ---------------------------------------------------------------------------
+
+export function ResponseModal({
+  response,
+  onClose,
+}: {
+  response: SurveyResponse | null
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <AnimatePresence>
+      {response && (
+        <motion.div
+          className="rm-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="rm-panel"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="rm-head">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <RolePill role={response.role} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--muted)' }}>
+                    {response.submittedAt.toLocaleString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    · {timeAgo(response.submittedAt)}
+                  </span>
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, marginTop: 8 }}>
+                  {response.facultyShort}
+                  {response.dept ? ` · ${response.dept}` : ''}
+                </div>
+              </div>
+              <button type="button" className="rm-close" aria-label="Close" onClick={onClose}>
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="rm-body">
+              {response.answers.map((a) => (
+                <div key={a.label} className={`rm-row${a.freeText ? ' rm-row-free' : ''}`}>
+                  <div className="rm-label">{a.label}</div>
+                  <div className={`rm-value${a.value ? '' : ' rm-empty'}`}>
+                    {a.value || 'Not answered'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Count-up number

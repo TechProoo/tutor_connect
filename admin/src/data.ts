@@ -6,6 +6,14 @@
 
 export type Role = 'Student' | 'Tutor'
 
+/** One question → answer pair for the detail view. `freeText` marks the
+ *  open-ended "message" answers (feature ideas, suggestions, etc.). */
+export interface Answer {
+  label: string
+  value: string
+  freeText?: boolean
+}
+
 /** A student or tutor survey response, normalised for the dashboard. */
 export interface SurveyResponse {
   id: string
@@ -26,6 +34,8 @@ export interface SurveyResponse {
   submittedAt: Date
   /** True when at least two-thirds of the optional questions were answered. */
   completed: boolean
+  /** Every question → answer for this response, in survey order. */
+  answers: Answer[]
 }
 
 /** Fixed faculty list (mirrors the survey form) for filters. */

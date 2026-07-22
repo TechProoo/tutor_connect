@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FACULTIES, timeAgo, exportCsv, type Role, type SurveyResponse } from '../data'
-import { StatCard, PageHeader, PrimaryButton, RolePill, type Stat } from '../components/ui'
+import { StatCard, PageHeader, PrimaryButton, RolePill, ResponseModal, type Stat } from '../components/ui'
 import { Icon } from '../icons'
 
 const PAGE_SIZE = 10
@@ -11,6 +11,7 @@ const LOADED_AT = Date.now()
 export function People({ role, responses }: { role: Role; responses: SurveyResponse[] }) {
   const [query, setQuery] = useState('')
   const [faculty, setFaculty] = useState('All faculties')
+  const [selected, setSelected] = useState<SurveyResponse | null>(null)
 
   // Paging keyed to the active filters: when role/query/faculty change, the
   // stored key no longer matches and the page derives back to 0 — no effect needed.
@@ -145,6 +146,7 @@ export function People({ role, responses }: { role: Role; responses: SurveyRespo
                 </th>
                 <th style={{ padding: '10px 12px' }}>Status</th>
                 <th style={{ padding: '10px 12px' }}>Submitted</th>
+                <th style={{ padding: '10px 12px' }}></th>
               </tr>
             </thead>
             <AnimatePresence mode="popLayout" initial={false}>
@@ -158,7 +160,15 @@ export function People({ role, responses }: { role: Role; responses: SurveyRespo
                 {rows.map((r) => (
                   <tr
                     key={r.id}
-                    style={{ borderTop: '1px solid var(--bg)', fontSize: 13.5, fontWeight: 500 }}
+                    className="data-row"
+                    onClick={() => setSelected(r)}
+                    title="Click to read the full response"
+                    style={{
+                      borderTop: '1px solid var(--bg)',
+                      fontSize: 13.5,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
                   >
                     <td style={{ padding: '13px 12px', fontWeight: 700 }}>
                       {r.facultyShort}
@@ -189,12 +199,17 @@ export function People({ role, responses }: { role: Role; responses: SurveyRespo
                     <td style={{ padding: '13px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                       {timeAgo(r.submittedAt)}
                     </td>
+                    <td style={{ padding: '13px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <span className="data-row-read">
+                        Read <Icon name="chevR" size={13} />
+                      </span>
+                    </td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       style={{ padding: '34px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}
                     >
                       {all.length === 0
@@ -240,6 +255,8 @@ export function People({ role, responses }: { role: Role; responses: SurveyRespo
           </div>
         </div>
       </motion.div>
+
+      <ResponseModal response={selected} onClose={() => setSelected(null)} />
     </>
   )
 }

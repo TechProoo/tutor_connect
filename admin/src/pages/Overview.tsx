@@ -19,6 +19,7 @@ import {
   RolePill,
   PageHeader,
   PrimaryButton,
+  ResponseModal,
   type Stat,
 } from '../components/ui'
 
@@ -38,6 +39,7 @@ export function Overview({
 }) {
   const [rangeLabel, setRangeLabel] = useState<RangeLabel>('14 days')
   const [filter, setFilter] = useState<Filter>('All')
+  const [selected, setSelected] = useState<SurveyResponse | null>(null)
   const days = RANGE_MAP[rangeLabel]
 
   const current = useMemo(() => rangeResponses(responses, days), [responses, days])
@@ -177,16 +179,20 @@ export function Overview({
                 <th style={{ padding: '10px 12px' }}>Department</th>
                 <th style={{ padding: '10px 12px' }}>Focus</th>
                 <th style={{ padding: '10px 12px' }}>Submitted</th>
+                <th style={{ padding: '10px 12px' }}></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <motion.tr
                   key={r.id}
+                  className="data-row"
+                  onClick={() => setSelected(r)}
+                  title="Click to read the full response"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: i * 0.04 }}
-                  style={{ borderTop: '1px solid var(--bg)', fontSize: 13.5, fontWeight: 500 }}
+                  style={{ borderTop: '1px solid var(--bg)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
                 >
                   <td style={{ padding: '13px 12px', fontWeight: 700 }}>
                     {r.facultyShort}
@@ -202,12 +208,15 @@ export function Overview({
                   <td style={{ padding: '13px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                     {timeAgo(r.submittedAt)}
                   </td>
+                  <td style={{ padding: '13px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <span className="data-row-read">Read →</span>
+                  </td>
                 </motion.tr>
               ))}
               {rows.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{ padding: '34px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}
                   >
                     No responses in this period yet — share the survey link!
@@ -218,6 +227,8 @@ export function Overview({
           </table>
         </div>
       </motion.div>
+
+      <ResponseModal response={selected} onClose={() => setSelected(null)} />
     </>
   )
 }
