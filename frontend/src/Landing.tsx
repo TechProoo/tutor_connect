@@ -41,10 +41,9 @@ function Landing() {
               <span className="tc-highlight tc-highlight-top">a better way</span>{' '}
               to
               <br />
-              find the{' '}
-              <span className="tc-highlight tc-highlight-bottom">right tutor</span>
+              <span className="tc-highlight tc-highlight-bottom">learn and earn</span>
               <br />
-              on your campus
+              on campus.
             </h1>
             <p className="tc-subhead">
               Help us build Tutor Connect by sharing your feedback. Whether

@@ -51,7 +51,7 @@ export interface StudentAnswers {
   timing: string
   format: string
   feature: string
-  suggestions: string
+  whatsapp: string
 }
 
 export interface TutorAnswers {
@@ -68,7 +68,7 @@ export interface TutorAnswers {
   stopyou: string
   join: string
   feature: string
-  suggestions: string
+  whatsapp: string
 }
 
 export function submitStudentSurvey(s: StudentAnswers) {
@@ -89,7 +89,7 @@ export function submitStudentSurvey(s: StudentAnswers) {
       timing: s.timing,
       format: s.format,
       feature: s.feature,
-      suggestions: s.suggestions,
+      suggestions: s.whatsapp,
     }),
   )
 }
@@ -111,7 +111,7 @@ export function submitTutorSurvey(t: TutorAnswers) {
       stopYou: t.stopyou,
       join: t.join,
       feature: t.feature,
-      suggestions: t.suggestions,
+      suggestions: t.whatsapp,
     }),
   )
 }

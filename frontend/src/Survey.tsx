@@ -63,6 +63,15 @@ const RATES = [
   'Above ₦5,000',
 ]
 const FORMATS = ['Physical tutorials', 'Online tutorials', 'Both']
+const COURSE_SUGGESTIONS = [
+  'Engineering Mathematics',
+  'Calculus',
+  'Architectural Design Studio',
+  'Surveying',
+  'Fluid Mechanics',
+  'Financial Accounting',
+  'Microeconomics',
+]
 
 /* ---------- Reusable pieces ---------- */
 
@@ -263,7 +272,7 @@ const blankStudent = {
   dept: '',
   level: '',
   struggled: '',
-  courses: [] as string[],
+  courses: '',
   runto: '',
   wished: '',
   woulduse: '',
@@ -272,7 +281,7 @@ const blankStudent = {
   timing: '',
   format: '',
   feature: '',
-  suggestions: '',
+  whatsapp: '',
 }
 
 const blankTutor = {
@@ -289,7 +298,7 @@ const blankTutor = {
   stopyou: '',
   join: '',
   feature: '',
-  suggestions: '',
+  whatsapp: '',
 }
 
 type StringKeys<T> = {
@@ -321,7 +330,7 @@ function Survey() {
     setTutor((t) => ({ ...t, [field]: v }))
 
   const toggleStudent =
-    (field: 'courses' | 'trust', max?: number) => (v: string) =>
+    (field: 'trust', max?: number) => (v: string) =>
       setStudent((s) => {
         const arr = s[field]
         if (arr.includes(v)) return { ...s, [field]: arr.filter((x) => x !== v) }
@@ -371,7 +380,13 @@ function Survey() {
     setSending(true)
     setError(null)
     try {
-      await submitStudentSurvey(student)
+      await submitStudentSurvey({
+        ...student,
+        courses: student.courses
+          .split(',')
+          .map((course) => course.trim())
+          .filter(Boolean),
+      })
       setStudentSubmitted(true)
       setStudent(blankStudent)
     } catch (err) {
@@ -590,22 +605,21 @@ function Survey() {
                     value={student.struggled}
                     onSelect={setS('struggled')}
                   />
-                  <MultiChipGroup
-                    label="Which course(s) stressed you the most?"
-                    hint="(select all that apply)"
-                    options={[
-                      'Engineering Mathematics',
-                      'Calculus',
-                      'Architectural Design Studio',
-                      'Surveying',
-                      'Fluid Mechanics',
-                      'Financial Accounting',
-                      'Microeconomics',
-                      'Other',
-                    ]}
-                    values={student.courses}
-                    onToggle={toggleStudent('courses')}
-                  />
+                  <Field label="Which course(s) do you find most challenging?">
+                    <input
+                      className="sv-input"
+                      type="text"
+                      list="student-course-suggestions"
+                      placeholder="Type course names, separated by commas"
+                      value={student.courses}
+                      onChange={(e) => setS('courses')(e.target.value)}
+                    />
+                    <datalist id="student-course-suggestions">
+                      {COURSE_SUGGESTIONS.map((course) => (
+                        <option key={course} value={course} />
+                      ))}
+                    </datalist>
+                  </Field>
                   <ChipGroup
                     label="When you're confused in class, who do you normally run to?"
                     required
@@ -696,13 +710,15 @@ function Survey() {
                       onChange={(e) => setS('feature')(e.target.value)}
                     />
                   </Field>
-                  <Field label="Any other suggestions?" optional>
-                    <textarea
+                  <Field label="Get notified before Tutor Connect launches" optional>
+                    <input
                       className="sv-input"
-                      rows={2}
-                      placeholder="Anything else on your mind…"
-                      value={student.suggestions}
-                      onChange={(e) => setS('suggestions')(e.target.value)}
+                      type="tel"
+                      inputMode="tel"
+                      maxLength={20}
+                      placeholder="e.g. 08012345678"
+                      value={student.whatsapp}
+                      onChange={(e) => setS('whatsapp')(e.target.value)}
                     />
                   </Field>
                 </Section>
@@ -839,13 +855,15 @@ function Survey() {
                       onChange={(e) => setT('feature')(e.target.value)}
                     />
                   </Field>
-                  <Field label="Any other suggestions?" optional>
-                    <textarea
+                  <Field label="Get notified before Tutor Connect launches" optional>
+                    <input
                       className="sv-input"
-                      rows={2}
-                      placeholder="Anything else on your mind…"
-                      value={tutor.suggestions}
-                      onChange={(e) => setT('suggestions')(e.target.value)}
+                      type="tel"
+                      inputMode="tel"
+                      maxLength={20}
+                      placeholder="e.g. 08012345678"
+                      value={tutor.whatsapp}
+                      onChange={(e) => setT('whatsapp')(e.target.value)}
                     />
                   </Field>
                 </Section>
@@ -870,8 +888,8 @@ function Survey() {
           TutorConnect Nigeria&nbsp;·&nbsp;Learn Better. Achieve More.
         </div>
         <div className="sv-footer-note">
-          Your responses are private and used only to match you with the right
-          person on your campus.
+          Your responses are private and will only be used to improve Tutor
+          Connect and notify you if you choose to leave your contact details.
         </div>
       </footer>
     </div>
