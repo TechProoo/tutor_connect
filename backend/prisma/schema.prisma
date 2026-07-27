@@ -8,6 +8,147 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Course guides (courses.tutorconnect.ng)
+// ---------------------------------------------------------------------------
+
+/// Rasterisation state of an uploaded guide PDF.
+enum GuideStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum CodeStatus {
+  UNUSED
+  REDEEMED
+  DISABLED
+  REVOKED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum RecoveryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// A purchasable study guide. Uploaded as a PDF, then rasterised to private
+/// page images that are watermarked per-buyer at request time.
+model Guide {
+  id          String      @id @default(uuid())
+  title       String
+  courseCode  String
+  subject     String?
+  description String?
+  /// Bumped on every replace, so buyers always get the latest published file.
+  version     Int         @default(1)
+  published   Boolean     @default(false)
+  status      GuideStatus @default(PENDING)
+  pageCount   Int         @default(0)
+  /// Storage key of the original (private) PDF.
+  sourceKey   String?
+  /// Storage prefix holding the rendered, un-watermarked page images.
+  pagePrefix  String?
+  error       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  codes      AccessCode[]
+  recoveries RecoveryRequest[]
+
+  @@map("guides")
+}
+
+/// A one-time access code tied to one buyer and (after redemption) one browser.
+model AccessCode {
+  id       String @id @default(uuid())
+  /// SHA-256 of the normalised code — the plaintext is only shown at creation.
+  codeHash String @unique
+  /// Last 4 characters, so admins can recognise a code in listings.
+  codeLast4 String
+
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  buyerName  String
+  buyerPhone String
+  buyerEmail String
+
+  status CodeStatus @default(UNUSED)
+
+  /// Device binding — SHA-256 of the long-lived device token issued on redeem.
+  deviceTokenHash String?
+  deviceLabel     String?
+  deviceUa        String?
+  deviceIp        String?
+
+  redeemedAt   DateTime?
+  lastAccessAt DateTime?
+  accessCount  Int       @default(0)
+  /// How many times an admin has released the device binding.
+  resetCount   Int       @default(0)
+
+  emailStatus EmailStatus @default(PENDING)
+  emailError  String?
+  emailSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guideId])
+  @@index([buyerPhone])
+  @@index([buyerEmail])
+  @@map("access_codes")
+}
+
+/// Failed redemption attempts, for abuse monitoring.
+model AccessAttempt {
+  id        String   @id @default(uuid())
+  codeLast4 String
+  reason    String
+  ip        String?
+  ua        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("access_attempts")
+}
+
+/// "I lost access / changed browser" request, resolved manually by an admin.
+model RecoveryRequest {
+  id       String  @id @default(uuid())
+  name     String
+  phone    String
+  email    String
+  codeHint String?
+
+  guideId String?
+  guide   Guide?  @relation(fields: [guideId], references: [id], onDelete: SetNull)
+
+  reason    String?
+  status    RecoveryStatus @default(PENDING)
+  adminNote String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([phone])
+  @@index([status])
+  @@map("recovery_requests")
+}
+
+// ---------------------------------------------------------------------------
+// Survey (existing)
+// ---------------------------------------------------------------------------
+
 /// Responses from the "I'm a Student" survey (Bells Google Form).
 model StudentSurvey {
   id          String   @id @default(uuid())

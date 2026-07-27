@@ -1,0 +1,3 @@
+# Paid guide portal — not for indexing.
+User-agent: *
+Disallow: /

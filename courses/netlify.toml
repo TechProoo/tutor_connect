@@ -1,0 +1,24 @@
+# Netlify config for the Tutor Connect guide portal (courses.tutorconnect.ng).
+# Create a SEPARATE Netlify site and set its "Base directory" to `courses`.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback so reloads on any path serve the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The portal serves paid content — keep it out of search engines and
+# out of other sites' frames.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"
