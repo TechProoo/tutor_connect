@@ -1,14 +1,25 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon, type IconName } from '../icons'
 
-export type Section = 'Overview' | 'Students' | 'Tutors' | 'Faculties' | 'Settings'
+export type Section =
+  | 'Overview'
+  | 'Students'
+  | 'Tutors'
+  | 'Faculties'
+  | 'Guides'
+  | 'Codes'
+  | 'Recovery'
+  | 'Settings'
 
-const NAV_ITEMS: { label: Section; icon: IconName }[] = [
+const NAV_ITEMS: { label: Section; icon: IconName; group?: string }[] = [
   { label: 'Overview', icon: 'grid' },
   { label: 'Students', icon: 'cap' },
   { label: 'Tutors', icon: 'book' },
   { label: 'Faculties', icon: 'building' },
-  { label: 'Settings', icon: 'gear' },
+  { label: 'Guides', icon: 'book', group: 'Courses' },
+  { label: 'Codes', icon: 'shield' },
+  { label: 'Recovery', icon: 'link' },
+  { label: 'Settings', icon: 'gear', group: 'Workspace' },
 ]
 
 interface SidebarProps {
@@ -140,8 +151,32 @@ export function Sidebar({
       {NAV_ITEMS.map((n) => {
         const active = section === n.label
         return (
+          <div key={n.label}>
+            {n.group && showLabels && (
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: 1.1,
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,.4)',
+                  padding: '14px 14px 6px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {n.group}
+              </div>
+            )}
+            {n.group && !showLabels && (
+              <div
+                style={{
+                  height: 1,
+                  background: 'rgba(255,255,255,.14)',
+                  margin: '10px 8px',
+                }}
+              />
+            )}
           <motion.button
-            key={n.label}
             type="button"
             title={n.label}
             onClick={() => navClick(n.label)}
@@ -193,6 +228,7 @@ export function Sidebar({
               )}
             </AnimatePresence>
           </motion.button>
+          </div>
         )
       })}
 

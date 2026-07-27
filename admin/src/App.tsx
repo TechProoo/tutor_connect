@@ -5,6 +5,9 @@ import { Sidebar, type Section } from './components/Sidebar'
 import { Overview } from './pages/Overview'
 import { People } from './pages/People'
 import { Faculties } from './pages/Faculties'
+import { Guides } from './pages/Guides'
+import { Codes } from './pages/Codes'
+import { RecoveryPage } from './pages/RecoveryPage'
 import { Settings } from './pages/Settings'
 import { Icon } from './icons'
 import { loadSettings, saveSettings, type AdminSettings } from './settings'
@@ -140,6 +143,9 @@ function App() {
               {section === 'Students' && <People role="Student" responses={responses} />}
               {section === 'Tutors' && <People role="Tutor" responses={responses} />}
               {section === 'Faculties' && <Faculties responses={responses} />}
+              {section === 'Guides' && <Guides />}
+              {section === 'Codes' && <Codes />}
+              {section === 'Recovery' && <RecoveryPage />}
               {section === 'Settings' && <Settings settings={settings} onChange={patchSettings} />}
             </motion.div>
           </AnimatePresence>
