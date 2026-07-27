@@ -97,28 +97,23 @@ export class GuidesService {
     }
 
     // First upload keeps version 1; every replacement bumps it.
-    const version = guide.sourceKey ? guide.version + 1 : guide.version;
+    const isReplacement = Boolean(guide.sourceKey);
+    const version = isReplacement ? guide.version + 1 : guide.version;
     const base = `guides/${guide.id}/v${version}`;
     const sourceKey = `${base}/source.pdf`;
 
     await this.storage.put(sourceKey, file.buffer, 'application/pdf');
 
+    // Only the status moves now. A replacement keeps serving the previous
+    // version (pagePrefix, pageCount and published are untouched) until the new
+    // one is fully rendered, so buyers never hit a half-built guide.
     const updated = await this.prisma.guide.update({
       where: { id },
-      data: {
-        version,
-        sourceKey,
-        pagePrefix: `${base}/pages`,
-        status: GuideStatus.PROCESSING,
-        pageCount: 0,
-        error: null,
-        // A guide being re-rendered must not stay readable mid-flight.
-        published: false,
-      },
+      data: { sourceKey, status: GuideStatus.PROCESSING, error: null },
     });
 
     // Rasterising is slow; run it after the response so the upload returns fast.
-    void this.process(id, file.buffer, `${base}/pages`, guide.version, version);
+    void this.process(id, file.buffer, base, guide.version, version, isReplacement);
 
     return updated;
   }
@@ -126,29 +121,53 @@ export class GuidesService {
   private async process(
     id: string,
     pdf: Buffer,
-    pagePrefix: string,
+    base: string,
     previousVersion: number,
     version: number,
+    isReplacement: boolean,
   ) {
+    const pagePrefix = `${base}/pages`;
     try {
-      const pages = await this.renderer.render(pdf);
-      if (!pages.length) throw new Error('The PDF contains no pages');
+      let lastPublishedAt = 0;
 
-      await Promise.all(
-        pages.map((p) =>
-          this.storage.put(
-            `${pagePrefix}/${String(p.index).padStart(4, '0')}.jpg`,
-            p.jpeg,
-            'image/jpeg',
-          ),
-        ),
-      );
+      const total = await this.renderer.render(pdf, async (page, pageTotal) => {
+        await this.storage.put(
+          `${pagePrefix}/${String(page.index).padStart(4, '0')}.jpg`,
+          page.jpeg,
+          'image/jpeg',
+        );
 
+        // On a first upload there is nothing else to read, so release pages as
+        // they land — a student can start on page 1 while the rest renders.
+        // The database is in another region, so publish the first page
+        // immediately and then batch the rest rather than writing per page.
+        const shouldPublish =
+          !isReplacement &&
+          (page.index === 1 || Date.now() - lastPublishedAt > 3000);
+        if (shouldPublish) {
+          lastPublishedAt = Date.now();
+          await this.prisma.guide
+            .update({
+              where: { id },
+              data: { pagePrefix, pageCount: page.index, version },
+            })
+            .catch(() => undefined);
+        }
+        if (page.index === 1 || page.index % 10 === 0 || page.index === pageTotal) {
+          this.logger.log(`Guide ${id}: ${page.index}/${pageTotal} pages ready`);
+        }
+      });
+
+      if (!total) throw new Error('The PDF contains no pages');
+
+      // Swap to the finished version in one write.
       await this.prisma.guide.update({
         where: { id },
         data: {
           status: GuideStatus.READY,
-          pageCount: pages.length,
+          pagePrefix,
+          pageCount: total,
+          version,
           error: null,
         },
       });
@@ -160,7 +179,7 @@ export class GuidesService {
           .catch(() => undefined);
       }
 
-      this.logger.log(`Guide ${id} ready — ${pages.length} pages (v${version})`);
+      this.logger.log(`Guide ${id} ready — ${total} pages (v${version})`);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       this.logger.error(`Guide ${id} failed to render: ${message}`);

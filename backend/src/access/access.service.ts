@@ -38,12 +38,32 @@ class Throttle {
   }
 }
 
+/** Watermarked pages held in memory; ~100KB each, so this stays well under 10MB. */
+const PAGE_CACHE_LIMIT = 80;
+
+/**
+ * How long an authorised device is trusted without re-querying Postgres.
+ *
+ * The database lives in another region, so a lookup per page request adds well
+ * over a second to every image. Caching the authorisation makes page turns
+ * feel instant; the cost is that a revoked or reset code can still be read for
+ * up to this long, which is an acceptable trade for a reading session.
+ */
+const AUTH_TTL_MS = 30_000;
+
 @Injectable()
 export class AccessService {
   private readonly logger = new Logger(AccessService.name);
   private readonly throttle = new Throttle();
   /** Avoid a DB write on literally every page view. */
   private readonly lastTouch = new Map<string, number>();
+  /** LRU of already-watermarked pages, keyed by buyer + guide version + page. */
+  private readonly pageCache = new Map<string, Buffer>();
+  /** Short-lived authorisation cache, so page turns skip the remote database. */
+  private readonly authCache = new Map<
+    string,
+    { at: number; code: Awaited<ReturnType<AccessService['fetchAuthorized']>> }
+  >();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -145,11 +165,9 @@ export class AccessService {
     return { ...(await this.session(token)), deviceToken: token };
   }
 
-  /** Resolve a device token to its live access record. */
-  private async authorize(token: string | undefined) {
-    if (!token) throw new ForbiddenException('No access on this device');
+  private async fetchAuthorized(tokenHash: string) {
     const code = await this.prisma.accessCode.findFirst({
-      where: { deviceTokenHash: hashToken(token) },
+      where: { deviceTokenHash: tokenHash },
       include: { guide: true },
     });
     if (!code) throw new ForbiddenException('No access on this device');
@@ -161,11 +179,36 @@ export class AccessService {
     return code;
   }
 
+  /**
+   * Resolve a device token to its live access record, reusing a recent lookup
+   * so a burst of page requests doesn't pay a cross-region query each time.
+   */
+  private async authorize(token: string | undefined, allowCache = true) {
+    if (!token) throw new ForbiddenException('No access on this device');
+    const tokenHash = hashToken(token);
+
+    if (allowCache) {
+      const hit = this.authCache.get(tokenHash);
+      if (hit && Date.now() - hit.at < AUTH_TTL_MS) return hit.code;
+    }
+
+    const code = await this.fetchAuthorized(tokenHash);
+    this.authCache.set(tokenHash, { at: Date.now(), code });
+    if (this.authCache.size > 500) {
+      const oldest = this.authCache.keys().next().value;
+      if (oldest) this.authCache.delete(oldest);
+    }
+    return code;
+  }
+
   /** Everything the reader needs to render, minus anything sensitive. */
   async session(token: string | undefined) {
-    const code = await this.authorize(token);
-    const readable =
-      code.guide.status === GuideStatus.READY && code.guide.published;
+    // Always read through: this drives the reader's page count, which grows
+    // while a guide is still rendering, and must reflect a revoked code.
+    const code = await this.authorize(token, false);
+    // Pages are published as they render, so a long upload becomes readable
+    // from page one instead of making the buyer wait for the whole document.
+    const readable = code.guide.published && code.guide.pageCount > 0;
 
     return {
       buyer: { name: code.buyerName, phone: code.buyerPhone },
@@ -178,6 +221,8 @@ export class AccessService {
         pageCount: readable ? code.guide.pageCount : 0,
         version: code.guide.version,
         ready: readable,
+        /** True while more pages are still being added to this guide. */
+        building: code.guide.status === GuideStatus.PROCESSING,
       },
       redeemedAt: code.redeemedAt,
       deviceLabel: code.deviceLabel,
@@ -189,7 +234,7 @@ export class AccessService {
     const code = await this.authorize(token);
     const guide = code.guide;
 
-    if (guide.status !== GuideStatus.READY || !guide.published) {
+    if (!guide.published || guide.pageCount === 0) {
       throw new NotFoundException('This guide is not available right now.');
     }
     if (
@@ -200,12 +245,30 @@ export class AccessService {
       throw new NotFoundException('Page not found');
     }
 
+    // Watermarking costs more than reading the page, so serve repeat views
+    // (re-scrolls, reloads) straight from memory.
+    const cacheKey = `${code.id}:${guide.version}:${pageNumber}`;
+    const cached = this.pageCache.get(cacheKey);
+    if (cached) {
+      // Refresh recency for the LRU.
+      this.pageCache.delete(cacheKey);
+      this.pageCache.set(cacheKey, cached);
+      void this.touch(code.id);
+      return cached;
+    }
+
     const key = `${guide.pagePrefix}/${String(pageNumber).padStart(4, '0')}.jpg`;
     const clean = await this.storage.get(key);
     const marked = await this.watermark.apply(clean, {
       buyerName: code.buyerName,
       buyerPhone: code.buyerPhone,
     });
+
+    this.pageCache.set(cacheKey, marked);
+    if (this.pageCache.size > PAGE_CACHE_LIMIT) {
+      const oldest = this.pageCache.keys().next().value;
+      if (oldest) this.pageCache.delete(oldest);
+    }
 
     void this.touch(code.id);
     return marked;

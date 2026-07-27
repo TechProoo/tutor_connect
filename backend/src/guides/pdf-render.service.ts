@@ -1,11 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createCanvas } from '@napi-rs/canvas';
-import type { Sharp, SharpOptions } from 'sharp';
-
-// sharp publishes ESM type declarations (`export default`) but resolves to a
-// CommonJS function at runtime, so require() keeps both sides correct.
-const sharp: (input?: Buffer | string, options?: SharpOptions) => Sharp =
-  require('sharp');
 
 /**
  * `pdfjs-dist` v6 ships as ESM only, but Nest compiles to CommonJS — a plain
@@ -23,17 +17,29 @@ export interface RenderedPage {
   height: number;
 }
 
+/** Called as each page finishes, so callers can publish pages progressively. */
+export type PageSink = (page: RenderedPage, total: number) => Promise<void>;
+
+/**
+ * Width, in CSS pixels, that pages are rasterised to. Comfortably sharp on a
+ * high-DPI phone while keeping files small — page weight is what students on
+ * mobile data actually feel.
+ */
+const TARGET_WIDTH = 1240;
+const JPEG_QUALITY = 0.82;
+
 @Injectable()
 export class PdfRenderService {
   private readonly logger = new Logger(PdfRenderService.name);
 
   /**
-   * Rasterise every page of a PDF to a JPEG buffer.
+   * Rasterise every page of a PDF to a JPEG buffer, invoking `sink` after each
+   * one so pages can be stored and served before the whole document is done.
    *
-   * Pages are rendered at `targetWidth` CSS pixels wide (capped by the PDF's
-   * own aspect) which is plenty for phone reading while keeping files small.
+   * The canvas encodes JPEG directly: going via PNG and re-encoding through
+   * sharp costs roughly 3.5x the time and produces ~5x larger files.
    */
-  async render(pdf: Buffer, targetWidth = 1400): Promise<RenderedPage[]> {
+  async render(pdf: Buffer, sink: PageSink): Promise<number> {
     const pdfjs = await esmImport('pdfjs-dist/legacy/build/pdf.mjs');
 
     const loadingTask = pdfjs.getDocument({
@@ -45,14 +51,15 @@ export class PdfRenderService {
       useSystemFonts: true,
     });
     const doc = await loadingTask.promise;
+    const total: number = doc.numPages;
+    const startedAt = Date.now();
 
-    const pages: RenderedPage[] = [];
     try {
-      for (let n = 1; n <= doc.numPages; n++) {
+      for (let n = 1; n <= total; n++) {
         const page = await doc.getPage(n);
         try {
           const base = page.getViewport({ scale: 1 });
-          const scale = Math.min(3, Math.max(1, targetWidth / base.width));
+          const scale = Math.min(3, Math.max(1, TARGET_WIDTH / base.width));
           const viewport = page.getViewport({ scale });
 
           const width = Math.ceil(viewport.width);
@@ -70,20 +77,24 @@ export class PdfRenderService {
             viewport,
           }).promise;
 
-          const jpeg = await sharp(canvas.toBuffer('image/png'))
-            .jpeg({ quality: 82, progressive: true })
-            .toBuffer();
-
-          pages.push({ index: n, jpeg, width, height });
+          const jpeg = canvas.toBuffer('image/jpeg', JPEG_QUALITY);
+          await sink({ index: n, jpeg, width, height }, total);
         } finally {
           page.cleanup();
         }
+
+        // Rendering is CPU-bound and synchronous inside pdf.js; yield between
+        // pages so the API keeps answering requests during a long upload.
+        await new Promise((resolve) => setImmediate(resolve));
       }
     } finally {
       await loadingTask.destroy();
     }
 
-    this.logger.log(`Rendered ${pages.length} page(s)`);
-    return pages;
+    const ms = Date.now() - startedAt;
+    this.logger.log(
+      `Rendered ${total} page(s) in ${ms}ms (${Math.round(ms / total)}ms/page)`,
+    );
+    return total;
   }
 }
