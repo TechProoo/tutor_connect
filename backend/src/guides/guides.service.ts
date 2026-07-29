@@ -7,10 +7,33 @@ import {
 import { GuideStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
-import { PdfRenderService } from './pdf-render.service';
+import {
+  PAGE_CONTENT_TYPE,
+  PAGE_EXTENSION,
+  PdfRenderService,
+  type OutlineEntry,
+} from './pdf-render.service';
 import { CreateGuideDto, UpdateGuideDto } from './dto/guide.dto';
 
 const PDF_MAGIC = '%PDF';
+
+/**
+ * Search text and table of contents for one rendered version, stored beside its
+ * pages. Keeping this in storage rather than the database means adding search
+ * needed no migration, and it is read as a unit anyway.
+ */
+export interface GuideIndex {
+  outline: OutlineEntry[];
+  searchable: boolean;
+  /** Page number (as a string key) to that page's flattened text. */
+  pages: Record<string, string>;
+}
+
+/** Name of the index object within a version's folder. */
+export const INDEX_FILE = 'index.json';
+
+/** Subfolder holding page-navigator previews. */
+export const THUMB_FOLDER = 'thumbs';
 
 @Injectable()
 export class GuidesService {
@@ -129,36 +152,63 @@ export class GuidesService {
     const pagePrefix = `${base}/pages`;
     try {
       let lastPublishedAt = 0;
+      const text: Record<string, string> = {};
 
-      const total = await this.renderer.render(pdf, async (page, pageTotal) => {
-        await this.storage.put(
-          `${pagePrefix}/${String(page.index).padStart(4, '0')}.jpg`,
-          page.jpeg,
-          'image/jpeg',
-        );
+      const { total, outline, searchable } = await this.renderer.render(
+        pdf,
+        async (page, pageTotal) => {
+          const name = String(page.index).padStart(4, '0');
+          if (page.text) text[String(page.index)] = page.text;
 
-        // On a first upload there is nothing else to read, so release pages as
-        // they land — a student can start on page 1 while the rest renders.
-        // The database is in another region, so publish the first page
-        // immediately and then batch the rest rather than writing per page.
-        const shouldPublish =
-          !isReplacement &&
-          (page.index === 1 || Date.now() - lastPublishedAt > 3000);
-        if (shouldPublish) {
-          lastPublishedAt = Date.now();
-          await this.prisma.guide
-            .update({
-              where: { id },
-              data: { pagePrefix, pageCount: page.index, version },
-            })
-            .catch(() => undefined);
-        }
-        if (page.index === 1 || page.index % 10 === 0 || page.index === pageTotal) {
-          this.logger.log(`Guide ${id}: ${page.index}/${pageTotal} pages ready`);
-        }
-      });
+          await Promise.all([
+            this.storage.put(
+              `${pagePrefix}/${name}.${PAGE_EXTENSION}`,
+              page.image,
+              PAGE_CONTENT_TYPE,
+            ),
+            this.storage.put(
+              `${base}/${THUMB_FOLDER}/${name}.${PAGE_EXTENSION}`,
+              page.thumbnail,
+              PAGE_CONTENT_TYPE,
+            ),
+          ]);
+
+          // On a first upload there is nothing else to read, so release pages as
+          // they land — a student can start on page 1 while the rest renders.
+          // The database is in another region, so publish the first page
+          // immediately and then batch the rest rather than writing per page.
+          const shouldPublish =
+            !isReplacement &&
+            (page.index === 1 || Date.now() - lastPublishedAt > 3000);
+          if (shouldPublish) {
+            lastPublishedAt = Date.now();
+            await this.prisma.guide
+              .update({
+                where: { id },
+                data: { pagePrefix, pageCount: page.index, version },
+              })
+              .catch(() => undefined);
+          }
+          if (
+            page.index === 1 ||
+            page.index % 10 === 0 ||
+            page.index === pageTotal
+          ) {
+            this.logger.log(`Guide ${id}: ${page.index}/${pageTotal} pages ready`);
+          }
+        },
+      );
 
       if (!total) throw new Error('The PDF contains no pages');
+
+      // Search and contents only become available once the whole document has
+      // been read, so this lands in one write at the end.
+      const index: GuideIndex = { outline, searchable, pages: text };
+      await this.storage.put(
+        `${base}/${INDEX_FILE}`,
+        Buffer.from(JSON.stringify(index)),
+        'application/json',
+      );
 
       // Swap to the finished version in one write.
       await this.prisma.guide.update({

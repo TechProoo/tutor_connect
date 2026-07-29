@@ -25,10 +25,17 @@ export class WatermarkService {
 
     const svg = Buffer.from(this.overlaySvg(width, height, mark));
 
-    return img
-      .composite([{ input: svg, top: 0, left: 0 }])
-      .jpeg({ quality: 82, progressive: true })
-      .toBuffer();
+    return (
+      img
+        .composite([{ input: svg, top: 0, left: 0 }])
+        // Delivered as WebP whatever the master was: on a real guide page this
+        // is both smaller and quicker than the JPEG it replaced, and it drops
+        // the ringing JPEG leaves around text. `effort` is deliberately low —
+        // this runs per request, and the levels above it cost several times the
+        // time to save a few KB.
+        .webp({ quality: 84, effort: 2 })
+        .toBuffer()
+    );
   }
 
   private overlaySvg(width: number, height: number, mark: Watermark): string {

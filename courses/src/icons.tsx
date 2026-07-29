@@ -86,6 +86,128 @@ export const ExitIcon = (p: IconProps) => (
   </Svg>
 )
 
+export const MenuIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </Svg>
+)
+
+export const MinusIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 12h14" />
+  </Svg>
+)
+
+export const PlusIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+)
+
+export const FitIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+    <path d="M8 12h8M10 10l-2 2 2 2M14 10l2 2-2 2" />
+  </Svg>
+)
+
+export const PagesIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="5" y="3" width="14" height="8" rx="1.5" />
+    <rect x="5" y="15" width="14" height="6" rx="1.5" />
+  </Svg>
+)
+
+export const SinglePageIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="5" y="3" width="14" height="18" rx="1.5" />
+    <path d="M8 7h8M8 11h8M8 15h5" />
+  </Svg>
+)
+
+export const FullscreenIcon = ({
+  active,
+  ...p
+}: IconProps & { active?: boolean }) => (
+  <Svg {...p}>
+    {active ? (
+      <>
+        <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M8 21v-3a2 2 0 0 0-2-2H3M16 21v-3a2 2 0 0 1 2-2h3" />
+      </>
+    ) : (
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+    )}
+  </Svg>
+)
+
+export const BookmarkIcon = ({
+  filled,
+  ...p
+}: IconProps & { filled?: boolean }) => (
+  <svg
+    width={p.size ?? 16}
+    height={p.size ?? 16}
+    viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={p.className}
+    aria-hidden="true"
+  >
+    <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+  </svg>
+)
+
+export const SearchIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </Svg>
+)
+
+export const ContentsIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 6h13M8 12h13M8 18h13" />
+    <path d="M3 6h.01M3 12h.01M3 18h.01" />
+  </Svg>
+)
+
+export const NotesIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6M8 13h8M8 17h6" />
+  </Svg>
+)
+
+export const FocusIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+    <circle cx="12" cy="12" r="3" />
+  </Svg>
+)
+
+export const ThemeIcon = ({
+  theme,
+  ...p
+}: IconProps & { theme: 'cloud' | 'paper' | 'midnight' }) => (
+  <Svg {...p}>
+    {theme === 'midnight' ? (
+      <path d="M20.5 14.4A8.4 8.4 0 0 1 9.6 3.5 8.5 8.5 0 1 0 20.5 14.4Z" />
+    ) : theme === 'paper' ? (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+      </>
+    ) : (
+      <>
+        <path d="M17.5 19H7a5 5 0 1 1 1.6-9.74A6 6 0 0 1 20 12a3.5 3.5 0 0 1-2.5 7Z" />
+      </>
+    )}
+  </Svg>
+)
+
 /** Four-point sparkle cluster, matching the marketing site's decoration. */
 export function Sparkle({ className }: { className?: string }) {
   return (

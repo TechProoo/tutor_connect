@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import type { Request, Response } from 'express';
 import { IsString, MaxLength } from 'class-validator';
 import { AccessService, RequestMeta } from './access.service';
 import { GuidesService } from '../guides/guides.service';
+import { PAGE_CONTENT_TYPE } from '../guides/pdf-render.service';
 
 class RedeemDto {
   @IsString()
@@ -87,15 +89,44 @@ export class AccessController {
 
   @Get('page/:n')
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-  @Header('Content-Type', 'image/jpeg')
+  @Header('Content-Type', PAGE_CONTENT_TYPE)
   @Header('X-Content-Type-Options', 'nosniff')
   async page(
     @Param('n', ParseIntPipe) n: number,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const jpeg = await this.access.page(this.token(req), n);
-    res.setHeader('Content-Length', jpeg.length);
-    res.end(jpeg);
+    const image = await this.access.page(this.token(req), n);
+    res.setHeader('Content-Length', image.length);
+    res.end(image);
+  }
+
+  /**
+   * Page-navigator preview. Unlike a full page these are identical for every
+   * buyer and unreadably small, so they may be cached by the browser.
+   */
+  @Get('thumb/:n')
+  @Header('Cache-Control', 'private, max-age=3600')
+  @Header('Content-Type', PAGE_CONTENT_TYPE)
+  @Header('X-Content-Type-Options', 'nosniff')
+  async thumb(
+    @Param('n', ParseIntPipe) n: number,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const image = await this.access.thumbnail(this.token(req), n);
+    res.setHeader('Content-Length', image.length);
+    res.end(image);
+  }
+
+  /** The guide's table of contents; empty when the PDF had no bookmarks. */
+  @Get('outline')
+  outline(@Req() req: Request) {
+    return this.access.outline(this.token(req));
+  }
+
+  @Get('search')
+  search(@Req() req: Request, @Query('q') q?: string) {
+    return this.access.search(this.token(req), q ?? '');
   }
 }

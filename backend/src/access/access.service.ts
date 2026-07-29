@@ -10,6 +10,12 @@ import { CodeStatus, GuideStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { PAGE_EXTENSION, type OutlineEntry } from '../guides/pdf-render.service';
+import {
+  INDEX_FILE,
+  THUMB_FOLDER,
+  type GuideIndex,
+} from '../guides/guides.service';
 import { WatermarkService } from './watermark.service';
 import { describeDevice, hashCode, hashToken, lastFour } from '../codes/code.util';
 
@@ -39,8 +45,12 @@ class Throttle {
   }
 }
 
-/** Watermarked pages held in memory; ~100KB each, so this stays well under 10MB. */
-const PAGE_CACHE_LIMIT = 80;
+/**
+ * Watermarked pages held in memory. Pages are rasterised at reading resolution
+ * and so run to a few hundred KB each; this bound keeps the shared pool near
+ * 10MB even when several students are reading at once.
+ */
+const PAGE_CACHE_LIMIT = 24;
 
 /**
  * How long an authorised device is trusted without re-querying Postgres.
@@ -52,6 +62,29 @@ const PAGE_CACHE_LIMIT = 80;
  */
 const AUTH_TTL_MS = 30_000;
 
+/**
+ * Thumbnails are shared by every reader of a guide — they carry no watermark,
+ * being far too small to read — so a modest pool covers whole navigators.
+ */
+const THUMB_CACHE_LIMIT = 400;
+
+/** Search indexes are per guide version and a few hundred KB at most. */
+const INDEX_CACHE_LIMIT = 8;
+
+/** Cap on returned search hits, so a one-letter query can't return everything. */
+const MAX_SEARCH_RESULTS = 80;
+
+/** Characters of context shown around each search hit. */
+const SNIPPET_RADIUS = 60;
+
+export interface SearchHit {
+  page: number;
+  snippet: string;
+  /** Offsets of the match within `snippet`, for highlighting in the reader. */
+  from: number;
+  to: number;
+}
+
 @Injectable()
 export class AccessService {
   private readonly logger = new Logger(AccessService.name);
@@ -60,6 +93,10 @@ export class AccessService {
   private readonly lastTouch = new Map<string, number>();
   /** LRU of already-watermarked pages, keyed by buyer + guide version + page. */
   private readonly pageCache = new Map<string, Buffer>();
+  /** Thumbnails, keyed by guide version + page. Shared across all buyers. */
+  private readonly thumbCache = new Map<string, Buffer>();
+  /** Parsed search indexes, keyed by guide version. */
+  private readonly indexCache = new Map<string, GuideIndex>();
   /** Short-lived authorisation cache, so page turns skip the remote database. */
   private readonly authCache = new Map<
     string,
@@ -258,23 +295,31 @@ export class AccessService {
       return cached;
     }
 
-    const key = `${guide.pagePrefix}/${String(pageNumber).padStart(4, '0')}.jpg`;
+    // Guides rendered before pages moved to WebP still have .jpg masters, and
+    // those stay readable: the watermark step re-encodes to one delivered
+    // format either way, so only the lookup needs to know the difference.
+    const stem = `${guide.pagePrefix}/${String(pageNumber).padStart(4, '0')}`;
+    const key = `${stem}.${PAGE_EXTENSION}`;
     let clean: Buffer;
     try {
       clean = await this.storage.get(key);
-    } catch (e) {
-      // The guide is marked ready in the database but its rendered pages are
-      // not in this instance's storage — almost always because pages were
-      // rendered on another machine while storage is still on local disk.
-      this.logger.error(
-        `Missing page file "${key}" for guide ${guide.courseCode} ` +
-          `(${guide.id}). Storage driver: ${this.storage.driver}. ` +
-          `Re-upload the PDF, or configure Supabase Storage so every instance ` +
-          `shares the same files. Cause: ${e instanceof Error ? e.message : e}`,
-      );
-      throw new ServiceUnavailableException(
-        'This page is temporarily unavailable. Please contact support so we can restore it.',
-      );
+    } catch {
+      try {
+        clean = await this.storage.get(`${stem}.jpg`);
+      } catch (e) {
+        // The guide is marked ready in the database but its rendered pages are
+        // not in this instance's storage — almost always because pages were
+        // rendered on another machine while storage is still on local disk.
+        this.logger.error(
+          `Missing page file "${key}" for guide ${guide.courseCode} ` +
+            `(${guide.id}). Storage driver: ${this.storage.driver}. ` +
+            `Re-upload the PDF, or configure Supabase Storage so every instance ` +
+            `shares the same files. Cause: ${e instanceof Error ? e.message : e}`,
+        );
+        throw new ServiceUnavailableException(
+          'This page is temporarily unavailable. Please contact support so we can restore it.',
+        );
+      }
     }
 
     const marked = await this.watermark.apply(clean, {
@@ -290,6 +335,147 @@ export class AccessService {
 
     void this.touch(code.id);
     return marked;
+  }
+
+  /**
+   * A page-navigator preview.
+   *
+   * Unlike a page these carry no watermark and are identical for every buyer,
+   * so one cache entry serves everyone and no per-request encoding happens.
+   * They are also optional: a guide rendered before thumbnails existed simply
+   * has none, and the reader falls back to a page number.
+   */
+  async thumbnail(token: string | undefined, pageNumber: number) {
+    const code = await this.authorize(token);
+    const guide = code.guide;
+
+    if (!guide.published || guide.pageCount === 0) {
+      throw new NotFoundException('This guide is not available right now.');
+    }
+    if (
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > guide.pageCount
+    ) {
+      throw new NotFoundException('Page not found');
+    }
+
+    const cacheKey = `${guide.id}:${guide.version}:${pageNumber}`;
+    const cached = this.thumbCache.get(cacheKey);
+    if (cached) {
+      this.thumbCache.delete(cacheKey);
+      this.thumbCache.set(cacheKey, cached);
+      return cached;
+    }
+
+    // pagePrefix ends in "/pages"; thumbnails sit beside that folder.
+    const versionBase = guide.pagePrefix.replace(/\/pages$/, '');
+    const name = String(pageNumber).padStart(4, '0');
+
+    let thumb: Buffer;
+    try {
+      thumb = await this.storage.get(
+        `${versionBase}/${THUMB_FOLDER}/${name}.${PAGE_EXTENSION}`,
+      );
+    } catch {
+      throw new NotFoundException('No preview for this page');
+    }
+
+    this.thumbCache.set(cacheKey, thumb);
+    if (this.thumbCache.size > THUMB_CACHE_LIMIT) {
+      const oldest = this.thumbCache.keys().next().value;
+      if (oldest) this.thumbCache.delete(oldest);
+    }
+    return thumb;
+  }
+
+  /** The guide's table of contents, empty when the PDF carried no bookmarks. */
+  async outline(token: string | undefined): Promise<OutlineEntry[]> {
+    const code = await this.authorize(token);
+    const index = await this.index(code.guide);
+    return index?.outline ?? [];
+  }
+
+  /**
+   * Find a phrase across the guide.
+   *
+   * Matching is plain case-insensitive substring search over the text pdf.js
+   * extracted at render time. That is enough for the "where did the lecturer
+   * define X" question students actually ask, and it keeps the whole feature
+   * free of an index server.
+   */
+  async search(
+    token: string | undefined,
+    query: string,
+  ): Promise<{ searchable: boolean; hits: SearchHit[] }> {
+    const code = await this.authorize(token);
+    const index = await this.index(code.guide);
+    if (!index) return { searchable: false, hits: [] };
+
+    const needle = (query ?? '').trim().toLowerCase();
+    if (needle.length < 2) return { searchable: index.searchable, hits: [] };
+
+    const hits: SearchHit[] = [];
+    const pages = Object.keys(index.pages)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    for (const page of pages) {
+      const text = index.pages[String(page)] ?? '';
+      const haystack = text.toLowerCase();
+      let at = haystack.indexOf(needle);
+
+      while (at !== -1 && hits.length < MAX_SEARCH_RESULTS) {
+        const start = Math.max(0, at - SNIPPET_RADIUS);
+        const end = Math.min(text.length, at + needle.length + SNIPPET_RADIUS);
+        const prefix = start > 0 ? '…' : '';
+        hits.push({
+          page,
+          snippet: prefix + text.slice(start, end) + (end < text.length ? '…' : ''),
+          from: prefix.length + (at - start),
+          to: prefix.length + (at - start) + needle.length,
+        });
+        at = haystack.indexOf(needle, at + needle.length);
+      }
+      if (hits.length >= MAX_SEARCH_RESULTS) break;
+    }
+
+    return { searchable: index.searchable, hits };
+  }
+
+  /** Load and cache one version's search index, or null if it has none. */
+  private async index(guide: {
+    id: string;
+    version: number;
+    pagePrefix: string;
+  }): Promise<GuideIndex | null> {
+    const cacheKey = `${guide.id}:${guide.version}`;
+    const cached = this.indexCache.get(cacheKey);
+    if (cached) return cached;
+
+    const versionBase = guide.pagePrefix.replace(/\/pages$/, '');
+    try {
+      const raw = await this.storage.get(`${versionBase}/${INDEX_FILE}`);
+      const parsed = JSON.parse(raw.toString('utf8')) as GuideIndex;
+      if (!parsed || typeof parsed !== 'object') return null;
+
+      const index: GuideIndex = {
+        outline: Array.isArray(parsed.outline) ? parsed.outline : [],
+        searchable: Boolean(parsed.searchable),
+        pages: parsed.pages && typeof parsed.pages === 'object' ? parsed.pages : {},
+      };
+
+      this.indexCache.set(cacheKey, index);
+      if (this.indexCache.size > INDEX_CACHE_LIMIT) {
+        const oldest = this.indexCache.keys().next().value;
+        if (oldest) this.indexCache.delete(oldest);
+      }
+      return index;
+    } catch {
+      // Guides rendered before search existed have no index; that is not an
+      // error, it just means this guide offers neither search nor contents.
+      return null;
+    }
   }
 
   /** Record activity at most once a minute per code. */
