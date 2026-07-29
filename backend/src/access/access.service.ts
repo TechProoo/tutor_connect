@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { CodeStatus, GuideStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
@@ -258,7 +259,24 @@ export class AccessService {
     }
 
     const key = `${guide.pagePrefix}/${String(pageNumber).padStart(4, '0')}.jpg`;
-    const clean = await this.storage.get(key);
+    let clean: Buffer;
+    try {
+      clean = await this.storage.get(key);
+    } catch (e) {
+      // The guide is marked ready in the database but its rendered pages are
+      // not in this instance's storage — almost always because pages were
+      // rendered on another machine while storage is still on local disk.
+      this.logger.error(
+        `Missing page file "${key}" for guide ${guide.courseCode} ` +
+          `(${guide.id}). Storage driver: ${this.storage.driver}. ` +
+          `Re-upload the PDF, or configure Supabase Storage so every instance ` +
+          `shares the same files. Cause: ${e instanceof Error ? e.message : e}`,
+      );
+      throw new ServiceUnavailableException(
+        'This page is temporarily unavailable. Please contact support so we can restore it.',
+      );
+    }
+
     const marked = await this.watermark.apply(clean, {
       buyerName: code.buyerName,
       buyerPhone: code.buyerPhone,

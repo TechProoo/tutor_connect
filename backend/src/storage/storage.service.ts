@@ -40,7 +40,23 @@ export class StorageService implements OnModuleInit {
     } else {
       await fs.mkdir(this.localRoot, { recursive: true });
       this.logger.warn(
-        'Storage driver: local disk (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY for production)',
+        '================================================================',
+      );
+      this.logger.warn('Storage driver: LOCAL DISK — not suitable for production.');
+      this.logger.warn(
+        `Guide pages are written to ${this.localRoot}, which is per-machine and`,
+      );
+      this.logger.warn(
+        'wiped on every deploy. Because the database is shared, a guide uploaded',
+      );
+      this.logger.warn(
+        'elsewhere will look READY but its pages will be missing here.',
+      );
+      this.logger.warn(
+        'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to fix this.',
+      );
+      this.logger.warn(
+        '================================================================',
       );
     }
   }
