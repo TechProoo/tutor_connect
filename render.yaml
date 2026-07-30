@@ -33,6 +33,11 @@ services:
         sync: false
       - key: SUPABASE_BUCKET
         value: guides
+      # How many guide pages may be encoding and uploading at once. Higher is
+      # faster but holds more full-size page buffers in memory; drop to 1 if a
+      # long upload ever exhausts a small instance.
+      - key: GUIDE_RENDER_CONCURRENCY
+        value: "3"
 
       # --- Access-code emails (Resend) ---
       # Without this, codes are logged instead of emailed.

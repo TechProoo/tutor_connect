@@ -154,6 +154,13 @@ export class GuidesService {
       let lastPublishedAt = 0;
       const text: Record<string, string> = {};
 
+      // Pages finish out of order now that they are stored concurrently, so
+      // track which have actually landed. Only the unbroken run from page 1 is
+      // safe to advertise — a reader told it has 5 pages must not be able to
+      // request a page that is still uploading.
+      const landed = new Set<number>();
+      let contiguous = 0;
+
       const { total, outline, searchable } = await this.renderer.render(
         pdf,
         async (page, pageTotal) => {
@@ -173,28 +180,32 @@ export class GuidesService {
             ),
           ]);
 
+          landed.add(page.index);
+          while (landed.has(contiguous + 1)) contiguous++;
+
           // On a first upload there is nothing else to read, so release pages as
           // they land — a student can start on page 1 while the rest renders.
           // The database is in another region, so publish the first page
           // immediately and then batch the rest rather than writing per page.
           const shouldPublish =
             !isReplacement &&
-            (page.index === 1 || Date.now() - lastPublishedAt > 3000);
+            contiguous > 0 &&
+            (contiguous === 1 || Date.now() - lastPublishedAt > 3000);
           if (shouldPublish) {
             lastPublishedAt = Date.now();
             await this.prisma.guide
               .update({
                 where: { id },
-                data: { pagePrefix, pageCount: page.index, version },
+                data: { pagePrefix, pageCount: contiguous, version },
               })
               .catch(() => undefined);
           }
           if (
-            page.index === 1 ||
-            page.index % 10 === 0 ||
-            page.index === pageTotal
+            contiguous === 1 ||
+            contiguous % 25 === 0 ||
+            contiguous === pageTotal
           ) {
-            this.logger.log(`Guide ${id}: ${page.index}/${pageTotal} pages ready`);
+            this.logger.log(`Guide ${id}: ${contiguous}/${pageTotal} pages ready`);
           }
         },
       );
