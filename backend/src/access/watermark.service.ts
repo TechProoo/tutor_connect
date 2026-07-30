@@ -12,6 +12,49 @@ export interface Watermark {
 }
 
 /**
+ * How many pages may be watermarked at once.
+ *
+ * Watermarking is the most memory-hungry thing this service does. A page master
+ * is a couple of hundred KB, but stamping it decodes the page to a full raster,
+ * rasterises an overlay the same size again, then composites and re-encodes —
+ * measured at roughly 90MB of resident memory for one page at the current
+ * render width.
+ *
+ * That cost is per request, and the reader prefetches several pages around the
+ * one being read, so a couple of students scrolling at once is enough to walk a
+ * 512MB instance into its limit and get it restarted. Queueing past this point
+ * makes a burst of traffic slightly slower to serve instead of fatal, and keeps
+ * peak memory a property of the code rather than of how many people showed up.
+ */
+const MAX_CONCURRENT_WATERMARKS = Math.max(
+  1,
+  Number(process.env.WATERMARK_CONCURRENCY) || 2,
+);
+
+/** Minimal counting semaphore: admits N holders, queues the rest in order. */
+class Semaphore {
+  private active = 0;
+  private readonly waiting: (() => void)[] = [];
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.limit) {
+      await new Promise<void>((resolve) => this.waiting.push(resolve));
+    }
+    this.active++;
+    try {
+      return await task();
+    } finally {
+      this.active--;
+      // Hand the slot straight to the next waiter rather than reopening it to
+      // whoever asks first, so a queued request can't be starved.
+      this.waiting.shift()?.();
+    }
+  }
+}
+
+/**
  * Burns a per-buyer watermark into a page image at request time.
  *
  * The mark is tiled diagonally across the whole page rather than sitting in a
@@ -19,7 +62,13 @@ export interface Watermark {
  */
 @Injectable()
 export class WatermarkService {
-  async apply(pageJpeg: Buffer, mark: Watermark): Promise<Buffer> {
+  private readonly gate = new Semaphore(MAX_CONCURRENT_WATERMARKS);
+
+  apply(pageJpeg: Buffer, mark: Watermark): Promise<Buffer> {
+    return this.gate.run(() => this.stamp(pageJpeg, mark));
+  }
+
+  private async stamp(pageJpeg: Buffer, mark: Watermark): Promise<Buffer> {
     const img = sharp(pageJpeg);
     const { width = 1400, height = 1980 } = await img.metadata();
 

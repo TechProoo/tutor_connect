@@ -82,18 +82,22 @@ const MAX_TEXT_PER_PAGE = 20_000;
  * is round-trip rather than bandwidth bound, and was measured scaling nearly
  * linearly out to eight concurrent uploads.
  *
- * Three is the knee of the curve: measured on a 150-page guide it cut rendering
- * from around 10 minutes to under 5, and a fourth page in flight bought under
- * 1% more because rasterising, not storage, is then the limit.
+ * Memory, not throughput, sets this. A page in flight holds its full-size pixel
+ * buffer — about 23MB at the current render width — on top of the canvas it was
+ * rasterised into and whatever libvips needs to encode it. Measured over a real
+ * guide, peak resident memory runs about 400MB at one page in flight, 500MB at
+ * two and 550MB at three, against a 512MB instance.
  *
- * The ceiling is memory — a page in flight can still hold its full-size pixel
- * buffer, about 23MB at the current render width, on top of the canvas it was
- * rasterised into. Override this if a small instance runs short: dropping to 1
- * restores the old strictly-sequential behaviour.
+ * So two, which still renders a 150-page guide in roughly seven minutes against
+ * the ten-plus it took strictly sequentially. Three is meaningfully faster again
+ * and worth setting through GUIDE_RENDER_CONCURRENCY on an instance with real
+ * memory headroom, but it does not fit the free tier — and an upload that gets
+ * the instance restarted takes the whole service down with it, which costs far
+ * more than the minutes it saves.
  */
 const MAX_PAGES_IN_FLIGHT = Math.max(
   1,
-  Number(process.env.GUIDE_RENDER_CONCURRENCY) || 3,
+  Number(process.env.GUIDE_RENDER_CONCURRENCY) || 2,
 );
 
 @Injectable()
@@ -205,14 +209,21 @@ export class PdfRenderService {
           start(
             (async () => {
               try {
-                const [image, thumbnail] = await Promise.all([
-                  raw.clone().webp({ quality: MASTER_QUALITY }).toBuffer(),
-                  raw
-                    .clone()
-                    .resize({ width: THUMB_WIDTH })
-                    .webp({ quality: THUMB_QUALITY })
-                    .toBuffer(),
-                ]);
+                // Encoded one after the other, not together: each libvips
+                // pipeline needs working memory the size of the full raster, so
+                // running both at once doubles the peak for this page. The
+                // thumbnail is a small fraction of the page's encode time, so
+                // serialising costs little and halves what a page in flight
+                // can be holding.
+                const image = await raw
+                  .clone()
+                  .webp({ quality: MASTER_QUALITY })
+                  .toBuffer();
+                const thumbnail = await raw
+                  .clone()
+                  .resize({ width: THUMB_WIDTH })
+                  .webp({ quality: THUMB_QUALITY })
+                  .toBuffer();
                 await sink(
                   { index, image, thumbnail, text, width, height },
                   total,

@@ -33,11 +33,19 @@ services:
         sync: false
       - key: SUPABASE_BUCKET
         value: guides
-      # How many guide pages may be encoding and uploading at once. Higher is
-      # faster but holds more full-size page buffers in memory; drop to 1 if a
-      # long upload ever exhausts a small instance.
+      # Image work is what uses memory on this service, and the free tier only
+      # has 512MB. Both of these trade speed for headroom, so raise them after
+      # upgrading the instance, not before.
+      #
+      # Pages encoding and uploading at once while the next one rasterises.
+      # Peak memory is roughly 400MB at 1, 500MB at 2, 550MB at 3.
       - key: GUIDE_RENDER_CONCURRENCY
-        value: "3"
+        value: "2"
+      # Pages being watermarked at once. Each costs about 90MB, and this runs on
+      # every page a student reads, so it is the limit that protects the service
+      # from a burst of readers.
+      - key: WATERMARK_CONCURRENCY
+        value: "2"
 
       # --- Browser access ---
       # The tutorconnect.ng sites are allowed by default. Set this to a

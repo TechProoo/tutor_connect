@@ -3,6 +3,23 @@ import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sharp = require('sharp');
+
+/**
+ * Keep libvips lean.
+ *
+ * Image work here is one-shot — a page is decoded, stamped and encoded once —
+ * so libvips's operation cache only holds memory that will never be reused. Its
+ * thread pool is sized from the CPU count and gives every thread its own
+ * working buffers, which on a small single-core instance multiplies peak memory
+ * for no throughput. Both are set before anything touches sharp.
+ */
+function configureImageProcessing() {
+  sharp.cache(false);
+  sharp.concurrency(1);
+}
+
 /**
  * Browser origins allowed to call this API.
  *
@@ -25,6 +42,8 @@ const ALLOWED_ORIGINS = [
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
 
 async function bootstrap() {
+  configureImageProcessing();
+
   const app = await NestFactory.create(AppModule);
 
   // Trust Render's proxy so req.ip reflects the real client address.
