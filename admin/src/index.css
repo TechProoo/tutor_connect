@@ -69,6 +69,69 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+/* ---------------------------------------------------------------------------
+   Bouncing dots — the one busy indicator, used for fetching, reloading and
+   uploading. Kept in CSS rather than framer-motion because it runs on the
+   compositor and so keeps animating smoothly through the long, main-thread
+   -heavy work it reports on, such as a large guide upload.
+   --------------------------------------------------------------------------- */
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  /* Sized in em so a dot scales with whatever text it sits beside. */
+  gap: 0.34em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dots span {
+  width: 0.42em;
+  height: 0.42em;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dot-bounce 0.9s ease-in-out infinite;
+}
+
+/* Staggered so the three dots read as one travelling wave. */
+.dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  35% {
+    transform: translateY(-0.42em);
+    opacity: 1;
+  }
+}
+
+/* Still show something is happening, without the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .dots span {
+    animation: dot-fade 1.2s ease-in-out infinite;
+  }
+
+  @keyframes dot-fade {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
 .tc-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

@@ -35,8 +35,9 @@ export function Overview({
   onRefresh,
 }: {
   responses: SurveyResponse[]
-  onRefresh: () => void
+  onRefresh: () => void | Promise<void>
 }) {
+  const [refreshing, setRefreshing] = useState(false)
   const [rangeLabel, setRangeLabel] = useState<RangeLabel>('14 days')
   const [filter, setFilter] = useState<Filter>('All')
   const [selected, setSelected] = useState<SurveyResponse | null>(null)
@@ -79,7 +80,18 @@ export function Overview({
     <>
       <PageHeader kicker="Survey Dashboard" title="Response Overview">
         <Segmented options={RANGE_LABELS} value={rangeLabel} onChange={setRangeLabel} variant="outline" layoutId="range-seg" />
-        <PrimaryButton icon="trend" onClick={onRefresh}>
+        <PrimaryButton
+          icon="trend"
+          busy={refreshing}
+          onClick={async () => {
+            setRefreshing(true)
+            try {
+              await onRefresh()
+            } finally {
+              setRefreshing(false)
+            }
+          }}
+        >
           Refresh
         </PrimaryButton>
         <PrimaryButton icon="download" onClick={() => exportCsv(current, `tutorconnect-responses-${days}d.csv`)}>

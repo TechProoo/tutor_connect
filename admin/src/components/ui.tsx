@@ -444,6 +444,58 @@ export function PageHeader({
 }
 
 // ---------------------------------------------------------------------------
+// Busy indicators
+// ---------------------------------------------------------------------------
+
+/**
+ * Three bouncing dots, inheriting the colour and scaling with the font size of
+ * whatever they sit in. This is the dashboard's only busy indicator, so that
+ * fetching, reloading and uploading all read the same way.
+ *
+ * Purely decorative: every use sits beside text that already says what is
+ * happening, and a button carries `aria-busy`. Announcing from here as well
+ * would repeat that on every dot — several times over on a page listing several
+ * guides at once.
+ */
+export function BouncingDots() {
+  return (
+    <span className="dots" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </span>
+  )
+}
+
+/**
+ * Full-width busy state, for when a panel has nothing to show yet. Replaces the
+ * bare "Loading…" text so a slow fetch looks alive rather than stalled.
+ *
+ * This is where the announcement belongs — one live region around the whole
+ * message, rather than one per dot.
+ */
+export function LoadingCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card"
+      role="status"
+      aria-live="polite"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        color: 'var(--muted)',
+        fontWeight: 600,
+        fontSize: 13.5,
+      }}
+    >
+      <BouncingDots />
+      {children}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Primary button
 // ---------------------------------------------------------------------------
 
@@ -451,19 +503,29 @@ export function PrimaryButton({
   onClick,
   icon,
   children,
+  busy,
+  disabled,
 }: {
   onClick?: () => void
   icon?: IconName
   children: React.ReactNode
+  /** Swaps the icon for bouncing dots and ignores clicks until it clears. */
+  busy?: boolean
+  disabled?: boolean
 }) {
+  const inert = busy || disabled
   return (
     <motion.button
       type="button"
-      onClick={onClick}
-      whileHover={{ scale: 1.03, background: 'var(--orange-dark)' }}
-      whileTap={{ scale: 0.96 }}
+      onClick={inert ? undefined : onClick}
+      disabled={inert}
+      aria-busy={busy || undefined}
+      // Holding still while busy keeps the dots the only thing moving.
+      whileHover={inert ? undefined : { scale: 1.03, background: 'var(--orange-dark)' }}
+      whileTap={inert ? undefined : { scale: 0.96 }}
       style={{
-        cursor: 'pointer',
+        cursor: busy ? 'progress' : disabled ? 'default' : 'pointer',
+        opacity: inert ? 0.75 : 1,
         background: 'var(--orange)',
         color: '#fff',
         border: 'none',
@@ -476,7 +538,7 @@ export function PrimaryButton({
         gap: 7,
       }}
     >
-      {icon && <Icon name={icon} size={15} strokeWidth={2.2} />}
+      {busy ? <BouncingDots /> : icon && <Icon name={icon} size={15} strokeWidth={2.2} />}
       {children}
     </motion.button>
   )

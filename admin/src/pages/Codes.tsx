@@ -16,7 +16,7 @@ import {
   type CodeStatus,
   type Guide,
 } from '../coursesApi'
-import { PageHeader, PrimaryButton, StatCard, type Stat } from '../components/ui'
+import { BouncingDots, PageHeader, PrimaryButton, StatCard, type Stat } from '../components/ui'
 import { Icon } from '../icons'
 import { timeAgo } from '../data'
 
@@ -36,6 +36,8 @@ export function Codes() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<CodeStatus | 'ALL'>('ALL')
   const [loading, setLoading] = useState(true)
+  /** Any fetch in progress, including the debounced one behind the search box. */
+  const [fetching, setFetching] = useState(false)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
@@ -46,6 +48,7 @@ export function Codes() {
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
 
   const load = useCallback(async () => {
+    setFetching(true)
     try {
       const [c, s] = await Promise.all([
         listCodes({
@@ -61,6 +64,7 @@ export function Codes() {
       setError(e instanceof Error ? e.message : 'Failed to load codes')
     } finally {
       setLoading(false)
+      setFetching(false)
     }
   }, [query, filter])
 
@@ -101,7 +105,7 @@ export function Codes() {
   return (
     <>
       <PageHeader kicker="Courses · Access" title="Access Codes">
-        <PrimaryButton icon="download" onClick={refresh}>
+        <PrimaryButton icon="download" onClick={refresh} busy={fetching}>
           Refresh
         </PrimaryButton>
         <PrimaryButton icon="mail" onClick={() => setShowNew((s) => !s)}>
@@ -413,6 +417,21 @@ export function Codes() {
                   </td>
                 </tr>
               ))}
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{ padding: '34px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}
+                  >
+                    <span
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 13.5 }}
+                    >
+                      <BouncingDots />
+                      Loading codes
+                    </span>
+                  </td>
+                </tr>
+              )}
               {!loading && codes.length === 0 && (
                 <tr>
                   <td
@@ -447,9 +466,10 @@ function RowBtn({
       type="button"
       onClick={onClick}
       disabled={busy}
+      aria-busy={busy || undefined}
       style={{
-        cursor: busy ? 'wait' : 'pointer',
-        opacity: busy ? 0.5 : 1,
+        cursor: busy ? 'progress' : 'pointer',
+        opacity: busy ? 0.55 : 1,
         border: `1.4px solid ${danger ? 'rgba(214,69,69,.3)' : 'var(--border)'}`,
         background: '#fff',
         color: danger ? 'var(--red)' : 'var(--navy)',
@@ -458,8 +478,12 @@ function RowBtn({
         fontSize: 11.5,
         fontWeight: 700,
         whiteSpace: 'nowrap',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
       }}
     >
+      {busy && <BouncingDots />}
       {children}
     </button>
   )

@@ -11,7 +11,7 @@ import {
   type RecoveryRequest,
   type RecoveryStatus,
 } from '../coursesApi'
-import { PageHeader, PrimaryButton } from '../components/ui'
+import { BouncingDots, LoadingCard, PageHeader, PrimaryButton } from '../components/ui'
 import { timeAgo } from '../data'
 
 const FILTERS: (RecoveryStatus | 'ALL')[] = ['PENDING', 'APPROVED', 'REJECTED', 'ALL']
@@ -26,6 +26,7 @@ export function RecoveryPage() {
   const [items, setItems] = useState<RecoveryRequest[]>([])
   const [filter, setFilter] = useState<RecoveryStatus | 'ALL'>('PENDING')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
   const [matches, setMatches] = useState<Record<string, RecoveryMatch[]>>({})
@@ -44,6 +45,16 @@ export function RecoveryPage() {
 
   useEffect(() => {
     load()
+  }, [load])
+
+  /** Reload from the Refresh button, which reports its own progress. */
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await load()
+    } finally {
+      setRefreshing(false)
+    }
   }, [load])
 
   const open = async (id: string) => {
@@ -90,7 +101,7 @@ export function RecoveryPage() {
             </option>
           ))}
         </select>
-        <PrimaryButton icon="download" onClick={load}>
+        <PrimaryButton icon="download" onClick={refresh} busy={refreshing}>
           Refresh
         </PrimaryButton>
       </PageHeader>
@@ -102,9 +113,7 @@ export function RecoveryPage() {
       )}
 
       {loading ? (
-        <div className="card" style={{ color: 'var(--muted)', fontWeight: 600 }}>
-          Loading requests…
-        </div>
+        <LoadingCard>Loading requests</LoadingCard>
       ) : items.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 30, marginBottom: 8 }}>✅</div>
@@ -295,8 +304,9 @@ function Btn({
       type="button"
       onClick={onClick}
       disabled={busy}
+      aria-busy={busy || undefined}
       style={{
-        cursor: busy ? 'wait' : 'pointer',
+        cursor: busy ? 'progress' : 'pointer',
         opacity: busy ? 0.55 : 1,
         border: `1.5px solid ${danger ? 'rgba(214,69,69,.32)' : 'var(--border)'}`,
         background: '#fff',
@@ -306,8 +316,12 @@ function Btn({
         fontSize: 12.5,
         fontWeight: 700,
         whiteSpace: 'nowrap',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
       }}
     >
+      {busy && <BouncingDots />}
       {children}
     </button>
   )

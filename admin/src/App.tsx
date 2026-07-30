@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sidebar, type Section } from './components/Sidebar'
+import { BouncingDots } from './components/ui'
 import { Overview } from './pages/Overview'
 import { People } from './pages/People'
 import { Faculties } from './pages/Faculties'
@@ -41,8 +42,16 @@ function App() {
   const [responses, setResponses] = useState<SurveyResponse[]>([])
   const [loadError, setLoadError] = useState('')
 
-  const load = useCallback(async () => {
-    setPhase('loading')
+  /**
+   * Fetch the responses behind the dashboard.
+   *
+   * A silent load leaves the dashboard on screen and lets the caller show its
+   * own progress. Without it a reload drops back to the full-page loading
+   * screen, which throws away the reader's scroll position and filters — and
+   * unmounts the very button that would report the reload.
+   */
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setPhase('loading')
     try {
       setResponses(await loadResponses())
       setPhase('ready')
@@ -55,6 +64,8 @@ function App() {
       }
     }
   }, [])
+
+  const reload = useCallback(() => load({ silent: true }), [load])
 
   useEffect(() => {
     load()
@@ -139,7 +150,7 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
             >
-              {section === 'Overview' && <Overview responses={responses} onRefresh={load} />}
+              {section === 'Overview' && <Overview responses={responses} onRefresh={reload} />}
               {section === 'Students' && <People role="Student" responses={responses} />}
               {section === 'Tutors' && <People role="Tutor" responses={responses} />}
               {section === 'Faculties' && <Faculties responses={responses} />}
@@ -223,13 +234,19 @@ function Gate({
         </div>
 
         {phase === 'loading' && (
-          <div style={{ padding: '18px 0 6px', color: 'var(--muted)', fontWeight: 600, fontSize: 14 }}>
-            <motion.span
-              animate={{ opacity: [0.45, 1, 0.45] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              Loading survey responses…
-            </motion.span>
+          <div
+            style={{
+              padding: '18px 0 6px',
+              color: 'var(--muted)',
+              fontWeight: 600,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 11,
+            }}
+          >
+            <BouncingDots />
+            Loading survey responses
           </div>
         )}
 

@@ -9,22 +9,29 @@ import {
   type Guide,
   type GuideStatus,
 } from '../coursesApi'
-import { PageHeader, PrimaryButton } from '../components/ui'
+import { BouncingDots, LoadingCard, PageHeader, PrimaryButton } from '../components/ui'
 import { Icon } from '../icons'
 
 const STATUS_STYLE: Record<GuideStatus, { bg: string; color: string; label: string }> = {
   PENDING: { bg: 'var(--bg)', color: 'var(--muted)', label: 'No file yet' },
-  PROCESSING: { bg: 'var(--orange-tint)', color: 'var(--orange)', label: 'Processing…' },
+  PROCESSING: { bg: 'var(--orange-tint)', color: 'var(--orange)', label: 'Processing' },
   READY: { bg: 'rgba(31,157,85,.1)', color: 'var(--green)', label: 'Ready' },
   FAILED: { bg: 'rgba(214,69,69,.09)', color: 'var(--red)', label: 'Failed' },
+}
+
+/** What a card is currently doing, so the wait can be named rather than guessed. */
+interface Busy {
+  id: string
+  label: string
 }
 
 export function Guides() {
   const [guides, setGuides] = useState<Guide[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [showNew, setShowNew] = useState(false)
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busy, setBusy] = useState<Busy | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -41,7 +48,18 @@ export function Guides() {
     load()
   }, [load])
 
-  // Poll while any guide is still rasterising.
+  /** Reload from the Refresh button, which reports its own progress. */
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await load()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [load])
+
+  // Poll while any guide is still rasterising. This deliberately calls `load`
+  // rather than `refresh`, so background polling never lights up the button.
   const processing = guides.some((g) => g.status === 'PROCESSING')
   useEffect(() => {
     if (!processing) return
@@ -49,8 +67,8 @@ export function Guides() {
     return () => clearInterval(t)
   }, [processing, load])
 
-  const act = async (id: string, fn: () => Promise<unknown>) => {
-    setBusyId(id)
+  const act = async (id: string, label: string, fn: () => Promise<unknown>) => {
+    setBusy({ id, label })
     setError('')
     try {
       await fn()
@@ -58,14 +76,14 @@ export function Guides() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed')
     } finally {
-      setBusyId(null)
+      setBusy(null)
     }
   }
 
   return (
     <>
       <PageHeader kicker="Courses · Library" title="Study Guides">
-        <PrimaryButton icon="download" onClick={load}>
+        <PrimaryButton icon="download" onClick={refresh} busy={refreshing}>
           Refresh
         </PrimaryButton>
         <PrimaryButton icon="chart" onClick={() => setShowNew((s) => !s)}>
@@ -98,9 +116,7 @@ export function Guides() {
       </AnimatePresence>
 
       {loading ? (
-        <div className="card" style={{ color: 'var(--muted)', fontWeight: 600 }}>
-          Loading guides…
-        </div>
+        <LoadingCard>Loading guides</LoadingCard>
       ) : guides.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 30, marginBottom: 8 }}>📚</div>
@@ -116,7 +132,7 @@ export function Guides() {
               key={g.id}
               guide={g}
               index={i}
-              busy={busyId === g.id}
+              busyLabel={busy?.id === g.id ? busy.label : null}
               onAct={act}
             />
           ))}
@@ -129,16 +145,18 @@ export function Guides() {
 function GuideCard({
   guide: g,
   index,
-  busy,
+  busyLabel,
   onAct,
 }: {
   guide: Guide
   index: number
-  busy: boolean
-  onAct: (id: string, fn: () => Promise<unknown>) => Promise<void>
+  /** Non-null while this card has an action in flight, naming what it is. */
+  busyLabel: string | null
+  onAct: (id: string, label: string, fn: () => Promise<unknown>) => Promise<void>
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const style = STATUS_STYLE[g.status]
+  const busy = busyLabel !== null
 
   return (
     <motion.div
@@ -161,9 +179,15 @@ function GuideCard({
                 borderRadius: 999,
                 background: style.bg,
                 color: style.color,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
               {style.label}
+              {/* Rasterising a long guide runs for minutes, so keep the badge
+                  itself alive rather than leaving a static "Processing". */}
+              {g.status === 'PROCESSING' && <BouncingDots />}
             </span>
             <span
               style={{
@@ -189,6 +213,27 @@ function GuideCard({
               {g.error}
             </div>
           )}
+          {busy && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                marginTop: 8,
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: 'var(--orange)',
+              }}
+            >
+              <BouncingDots />
+              {busyLabel}
+              {busyLabel === 'Uploading' && (
+                <span style={{ color: 'var(--muted)', fontWeight: 600 }}>
+                  — a long PDF can take a few minutes, keep this page open
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -199,12 +244,13 @@ function GuideCard({
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) onAct(g.id, () => uploadGuideFile(g.id, file))
+              if (file) onAct(g.id, 'Uploading', () => uploadGuideFile(g.id, file))
               e.target.value = ''
             }}
           />
           <SmallBtn
             disabled={busy}
+            busy={busyLabel === 'Uploading'}
             onClick={() => fileRef.current?.click()}
             icon="download"
           >
@@ -213,7 +259,12 @@ function GuideCard({
 
           <SmallBtn
             disabled={busy || g.status !== 'READY'}
-            onClick={() => onAct(g.id, () => updateGuide(g.id, { published: !g.published }))}
+            busy={busyLabel === 'Publishing' || busyLabel === 'Unpublishing'}
+            onClick={() =>
+              onAct(g.id, g.published ? 'Unpublishing' : 'Publishing', () =>
+                updateGuide(g.id, { published: !g.published }),
+              )
+            }
             icon={g.published ? 'shield' : 'check'}
           >
             {g.published ? 'Unpublish' : 'Publish'}
@@ -221,6 +272,7 @@ function GuideCard({
 
           <SmallBtn
             disabled={busy}
+            busy={busyLabel === 'Deleting'}
             danger
             onClick={() => {
               if (
@@ -228,7 +280,7 @@ function GuideCard({
                   `Delete "${g.title}"? This removes its pages and every access code for it.`,
                 )
               ) {
-                onAct(g.id, () => deleteGuide(g.id))
+                onAct(g.id, 'Deleting', () => deleteGuide(g.id))
               }
             }}
           >
@@ -244,12 +296,15 @@ function SmallBtn({
   children,
   onClick,
   disabled,
+  busy,
   danger,
   icon,
 }: {
   children: React.ReactNode
   onClick: () => void
   disabled?: boolean
+  /** Shows dots in place of the icon, for the action actually in flight. */
+  busy?: boolean
   danger?: boolean
   icon?: 'download' | 'check' | 'shield'
 }) {
@@ -258,9 +313,11 @@ function SmallBtn({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-busy={busy || undefined}
       style={{
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
+        cursor: busy ? 'progress' : disabled ? 'default' : 'pointer',
+        // A busy button stays legible; the others fade back out of the way.
+        opacity: busy ? 1 : disabled ? 0.5 : 1,
         border: `1.5px solid ${danger ? 'rgba(214,69,69,.35)' : 'var(--border)'}`,
         background: '#fff',
         color: danger ? 'var(--red)' : 'var(--navy)',
@@ -274,7 +331,7 @@ function SmallBtn({
         whiteSpace: 'nowrap',
       }}
     >
-      {icon && <Icon name={icon} size={14} />}
+      {busy ? <BouncingDots /> : icon && <Icon name={icon} size={14} />}
       {children}
     </button>
   )
@@ -356,8 +413,9 @@ function NewGuideForm({
         <button
           type="submit"
           disabled={busy}
+          aria-busy={busy || undefined}
           style={{
-            cursor: busy ? 'wait' : 'pointer',
+            cursor: busy ? 'progress' : 'pointer',
             background: 'var(--orange)',
             color: '#fff',
             border: 'none',
@@ -365,9 +423,13 @@ function NewGuideForm({
             padding: '11px 22px',
             fontSize: 13,
             fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          {busy ? 'Creating…' : 'Create guide'}
+          {busy && <BouncingDots />}
+          {busy ? 'Creating' : 'Create guide'}
         </button>
       </div>
     </form>
