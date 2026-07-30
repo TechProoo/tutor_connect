@@ -105,7 +105,15 @@ function base(
   role: Role,
 ): Pick<
   SurveyResponse,
-  'id' | 'role' | 'school' | 'faculty' | 'facultyShort' | 'dept' | 'level' | 'submittedAt'
+  | 'id'
+  | 'role'
+  | 'school'
+  | 'faculty'
+  | 'facultyShort'
+  | 'dept'
+  | 'level'
+  | 'phone'
+  | 'submittedAt'
 > {
   return {
     id: r.id,
@@ -115,6 +123,8 @@ function base(
     facultyShort: facultyShortName(r.faculty),
     dept: r.department,
     level: r.level ?? '',
+    // The launch-notice phone number shares the survey's `suggestions` column.
+    phone: r.suggestions ?? '',
     submittedAt: new Date(r.createdAt),
   }
 }

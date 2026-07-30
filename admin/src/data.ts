@@ -26,6 +26,11 @@ export interface SurveyResponse {
   facultyShort: string
   dept: string
   level: string
+  /**
+   * Phone / WhatsApp number from the optional "get notified before launch"
+   * field ('' when not given). Stored in the survey's `suggestions` column.
+   */
+  phone: string
   /** Students: courses they struggle with · Tutors: courses they can teach. */
   focus: string
   /** Students: willing-to-pay rate · Tutors: expected earning rate. */
@@ -152,27 +157,44 @@ export function formatNumber(n: number): string {
   return n.toLocaleString('en-US')
 }
 
+/**
+ * Render a phone number as a cell that keeps its leading zero.
+ *
+ * These numbers are Nigerian and written as 08012345678. Left as a bare value,
+ * Excel and Google Sheets read the cell as a number and drop the leading zero,
+ * which quietly turns every exported number into an unusable one. An explicit
+ * text formula is the portable way to stop that.
+ *
+ * The number is reduced to phone characters first: the field is free text from
+ * a public form, so this also means a submitted value can never break out of
+ * the formula it is being placed in.
+ */
+function phoneCell(phone: string): string {
+  const clean = phone.replace(/[^\d+\-() ]/g, '').trim()
+  return clean ? `="${clean}"` : ''
+}
+
 /** Download an array of responses as a CSV file. */
 export function exportCsv(rows: SurveyResponse[], filename: string) {
-  const header = ['Role', 'School', 'Faculty', 'Department', 'Level', 'Focus', 'Rate', 'Format', 'Status', 'Submitted']
+  const header = ['Role', 'Phone', 'School', 'Faculty', 'Department', 'Level', 'Focus', 'Rate', 'Format', 'Status', 'Submitted']
   const escape = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
   const lines = [
     header.join(','),
     ...rows.map((r) =>
       [
-        r.role,
-        r.school,
-        r.faculty,
-        r.dept,
-        r.level,
-        r.focus,
-        r.rate,
-        r.format,
-        r.completed ? 'Completed' : 'Partial',
-        r.submittedAt.toISOString(),
-      ]
-        .map(escape)
-        .join(','),
+        escape(r.role),
+        // Already a complete cell, so it must not be escaped again.
+        phoneCell(r.phone),
+        escape(r.school),
+        escape(r.faculty),
+        escape(r.dept),
+        escape(r.level),
+        escape(r.focus),
+        escape(r.rate),
+        escape(r.format),
+        escape(r.completed ? 'Completed' : 'Partial'),
+        escape(r.submittedAt.toISOString()),
+      ].join(','),
     ),
   ]
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
