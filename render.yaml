@@ -39,6 +39,13 @@ services:
       - key: GUIDE_RENDER_CONCURRENCY
         value: "3"
 
+      # --- Browser access ---
+      # The tutorconnect.ng sites are allowed by default. Set this to a
+      # comma-separated list of extra origins (a Netlify deploy preview, say);
+      # no trailing slashes, they never match the browser's Origin header.
+      - key: CORS_ORIGINS
+        sync: false
+
       # --- Access-code emails (Resend) ---
       # Without this, codes are logged instead of emailed.
       - key: RESEND_API_KEY
