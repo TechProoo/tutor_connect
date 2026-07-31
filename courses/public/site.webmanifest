@@ -1,0 +1,19 @@
+{
+  "name": "Tutor Connect Guides",
+  "short_name": "TC Guides",
+  "description": "Unlock and read your Tutor Connect study guide.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfcfb",
+  "theme_color": "#1a3a5c",
+  "icons": [
+    {
+      "src": "/tc-icon.png",
+      "sizes": "475x400",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

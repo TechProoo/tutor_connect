@@ -1,5 +1,9 @@
 # Netlify config for the Tutor Connect guide portal (courses.tutorconnect.ng).
-# Create a SEPARATE Netlify site and set its "Base directory" to `courses`.
+#
+# Create a SEPARATE Netlify site from this repo and set its
+# "Base directory" to `courses` — Netlify then reads this file.
+# Required environment variable: VITE_API_URL (the Render backend URL).
+
 [build]
   command = "npm run build"
   publish = "dist"
@@ -7,18 +11,37 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA fallback so reloads on any path serve the app.
+# SPA fallback: a reload on any path serves the app rather than a 404.
+# Real files (hashed assets, robots.txt, og-image.png) are matched first by
+# Netlify's static lookup, so this only catches app routes.
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# The portal serves paid content — keep it out of search engines and
-# out of other sites' frames.
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Robots-Tag = "noindex, nofollow"
+    # The portal is an access-code wall, not a useful search result. Crawling
+    # stays allowed in robots.txt so WhatsApp and friends can read the OG card;
+    # `follow` rather than `nofollow` keeps those unfurlers happy.
+    X-Robots-Tag = "noindex, follow"
+    # Guides are paid content — never let another site frame the reader.
     X-Frame-Options = "DENY"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "frame-ancestors 'none'"
     X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Nothing here needs a camera, microphone or location.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Vite fingerprints these filenames, so they can be cached indefinitely.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The shell must never be stale, or a deploy leaves students on old JS.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

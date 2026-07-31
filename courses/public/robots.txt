@@ -1,3 +1,11 @@
-# Paid guide portal — not for indexing.
+# Tutor Connect guide portal.
+#
+# Crawling is allowed so link unfurlers (WhatsApp, Facebook, X, Slack) can read
+# the Open Graph card when a buyer is sent their access link. The pages are kept
+# out of search results with `noindex` instead — see the meta tag in index.html
+# and the X-Robots-Tag header in netlify.toml.
+#
+# Guide content itself is never reachable without a redeemed access code, so
+# there is nothing here for a crawler to reach beyond the code-entry screen.
 User-agent: *
-Disallow: /
+Allow: /
