@@ -5,7 +5,7 @@
 const API_URL: string =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.PROD
-    ? "https://tutor-connect-e57d.onrender.com"
+    ? "https://tutorconnect-production-fafa.up.railway.app"
     : "http://localhost:3001");
 
 const TOKEN_KEY = "tc-device-token";

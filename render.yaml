@@ -63,7 +63,7 @@ services:
       - key: COURSES_URL
         value: https://courses.tutorconnect.ng
       - key: SUPPORT_EMAIL
-        value: support@tutorconnect.ng
+        value: Tutorconnectng@gmail.com
       # Optional — international format, digits only (e.g. 2348012345678)
       - key: SUPPORT_WHATSAPP
         sync: false

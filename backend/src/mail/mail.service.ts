@@ -37,7 +37,7 @@ export class MailService {
     this.portalUrl =
       this.config.get<string>('COURSES_URL') ?? 'https://courses.tutorconnect.ng';
     this.supportEmail =
-      this.config.get<string>('SUPPORT_EMAIL') ?? 'support@tutorconnect.ng';
+      this.config.get<string>('SUPPORT_EMAIL') ?? 'Tutorconnectng@gmail.com';
     this.supportWhatsapp = this.config.get<string>('SUPPORT_WHATSAPP') ?? '';
     if (!this.resend) {
       this.logger.warn('RESEND_API_KEY not set — access-code emails will be logged only');
@@ -54,6 +54,10 @@ export class MailService {
     try {
       const { error } = await this.resend.emails.send({
         from: this.from,
+        // `from` has to sit on a domain verified with the mail provider, which
+        // a Gmail address cannot be. Routing replies here means a student who
+        // just hits reply still reaches a real inbox.
+        replyTo: this.supportEmail,
         to: input.to,
         subject: `Your access code for ${input.courseCode} — ${input.guideTitle}`,
         html: this.template(input),

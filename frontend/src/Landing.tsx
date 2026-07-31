@@ -1,5 +1,6 @@
 import tcIcon from './assets/tc-icon.png'
 import heroPhoto from './assets/hero-photo.png'
+import { GuideCta } from './GuideCta'
 import './Landing.css'
 
 function Sparkles({ className }: { className: string }) {
@@ -124,6 +125,8 @@ function Landing() {
             </div>
           </div>
         </div>
+
+        <GuideCta />
       </div>
     </div>
   )

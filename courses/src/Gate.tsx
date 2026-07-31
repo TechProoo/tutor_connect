@@ -7,6 +7,7 @@ import {
   type Session,
 } from './api'
 import { Recovery } from './Recovery'
+import { GuideCta } from './GuideCta'
 import { Sparkle, LockIcon, ShieldIcon, PhoneIcon, ArrowIcon } from './icons'
 
 /** Codes are `TC-XXXX-XXXX`; format as the student types. */
@@ -110,46 +111,50 @@ export function Gate({
             </div>
           </section>
 
-          <section className="card">
-            <h2 className="card-title">Unlock your guide</h2>
-            <p className="card-sub">
-              Check your email for a code that looks like{' '}
-              <strong style={{ color: 'var(--navy)' }}>TC-4K7M-92QD</strong>.
-            </p>
+          <div>
+            <GuideCta />
 
-            <form onSubmit={submit}>
-              <label className="field-label" htmlFor="code">
-                Access code
-              </label>
-              <input
-                id="code"
-                ref={inputRef}
-                className={`code-input${shake ? ' shake' : ''}`}
-                value={code}
-                onChange={(e) => setCode(formatCode(e.target.value))}
-                placeholder="TC-XXXX-XXXX"
-                autoComplete="one-time-code"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                inputMode="text"
-                disabled={busy}
-                autoFocus
-              />
+            <section className="card">
+              <h2 className="card-title">Unlock your guide</h2>
+              <p className="card-sub">
+                Already bought? Check your email for a code that looks like{' '}
+                <strong style={{ color: 'var(--navy)' }}>TC-4K7M-92QD</strong>.
+              </p>
 
-              {notice && !error && <div className="notice">{notice}</div>}
-              {error && <div className="error">{error}</div>}
+              <form onSubmit={submit}>
+                <label className="field-label" htmlFor="code">
+                  Access code
+                </label>
+                <input
+                  id="code"
+                  ref={inputRef}
+                  className={`code-input${shake ? ' shake' : ''}`}
+                  value={code}
+                  onChange={(e) => setCode(formatCode(e.target.value))}
+                  placeholder="TC-XXXX-XXXX"
+                  autoComplete="one-time-code"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="text"
+                  disabled={busy}
+                  autoFocus
+                />
 
-              <button className="btn" type="submit" disabled={busy}>
-                {busy ? 'Unlocking…' : 'Unlock my guide'}
-                {!busy && <ArrowIcon size={16} />}
+                {notice && !error && <div className="notice">{notice}</div>}
+                {error && <div className="error">{error}</div>}
+
+                <button className="btn" type="submit" disabled={busy}>
+                  {busy ? 'Unlocking…' : 'Unlock my guide'}
+                  {!busy && <ArrowIcon size={16} />}
+                </button>
+              </form>
+
+              <button className="help-link" onClick={() => setShowRecovery(true)}>
+                Lost access or changed your browser?
               </button>
-            </form>
-
-            <button className="help-link" onClick={() => setShowRecovery(true)}>
-              Lost access or changed your browser?
-            </button>
-          </section>
+            </section>
+          </div>
         </main>
 
         {catalog.length > 0 && (
