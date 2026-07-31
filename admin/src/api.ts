@@ -10,7 +10,7 @@ import { facultyShortName, type Role, type SurveyResponse } from './data'
 export const API_URL: string = normalizeBase(
   import.meta.env.VITE_API_URL,
   import.meta.env.PROD
-    ? 'https://tutorconnect-production-3a39.up.railway.app'
+    ? 'https://api.tutorconnect.ng'
     : 'http://localhost:3001',
 )
 
