@@ -2,13 +2,25 @@
 // The device token is the student's only credential: it is issued once at
 // redemption and replayed on every request from that browser.
 
-// `||` rather than `??`: a blank VITE_API_URL has to fall back too, or every
-// call goes same-origin and the SPA redirect answers it with index.html.
-const API_URL: string =
-  import.meta.env.VITE_API_URL?.trim() ||
-  (import.meta.env.PROD
+const API_URL: string = normalizeBase(
+  import.meta.env.VITE_API_URL,
+  import.meta.env.PROD
     ? "https://tutorconnect-production-3a39.up.railway.app"
-    : "http://localhost:3001");
+    : "http://localhost:3001",
+);
+
+/**
+ * VITE_API_URL is typed by hand into a hosting dashboard. Blank, or a host with
+ * no scheme, both leave fetch treating the base as a relative path, where the
+ * SPA redirect answers with index.html instead of the API.
+ */
+function normalizeBase(raw: string | undefined, fallback: string): string {
+  const value = raw?.trim().replace(/\/+$/, "");
+  if (!value) return fallback;
+  // A leading slash is a deliberate same-origin proxy prefix, so leave it.
+  if (value.startsWith("/")) return value;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
 
 const TOKEN_KEY = "tc-device-token";
 

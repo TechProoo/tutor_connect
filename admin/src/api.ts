@@ -7,15 +7,29 @@
 
 import { facultyShortName, type Role, type SurveyResponse } from './data'
 
-// `||` rather than `??`: a blank VITE_API_URL has to fall through to the
-// default too. An empty base makes every call same-origin, and the SPA
-// redirect answers those with index.html and a 200, so the failure surfaces
-// as an HTML-parsed-as-JSON error rather than anything mentioning the API.
-const API_URL: string =
-  import.meta.env.VITE_API_URL?.trim() ||
-  (import.meta.env.PROD
+export const API_URL: string = normalizeBase(
+  import.meta.env.VITE_API_URL,
+  import.meta.env.PROD
     ? 'https://tutorconnect-production-3a39.up.railway.app'
-    : 'http://localhost:3001')
+    : 'http://localhost:3001',
+)
+
+/**
+ * VITE_API_URL is typed by hand into a hosting dashboard, and two ways of
+ * getting it wrong both end the same way: fetch treats the base as relative,
+ * the SPA redirect answers with index.html and a 200, and the dashboard
+ * reports a JSON parse error that says nothing about the API.
+ *
+ * Blank is one (which is why this is not `??`). A host with no scheme is the
+ * other — "api.example.com/x" is a relative path to fetch, not a host.
+ */
+function normalizeBase(raw: string | undefined, fallback: string): string {
+  const value = raw?.trim().replace(/\/+$/, '')
+  if (!value) return fallback
+  // A leading slash is a deliberate same-origin proxy prefix, so leave it.
+  if (value.startsWith('/')) return value
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`
+}
 
 const KEY_STORAGE = 'tc-admin-key'
 

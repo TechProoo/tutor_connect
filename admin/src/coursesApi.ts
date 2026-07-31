@@ -3,14 +3,7 @@
 // Reuses the same admin key as the survey dashboard.
 // ---------------------------------------------------------------------------
 
-import { getAdminKey, UnauthorizedError } from './api'
-
-// See the note in api.ts: `||` so a blank VITE_API_URL falls back too.
-const API_URL: string =
-  import.meta.env.VITE_API_URL?.trim() ||
-  (import.meta.env.PROD
-    ? 'https://tutorconnect-production-3a39.up.railway.app'
-    : 'http://localhost:3001')
+import { API_URL, getAdminKey, UnauthorizedError } from './api'
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
