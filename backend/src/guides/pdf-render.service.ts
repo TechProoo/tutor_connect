@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createCanvas } from '@napi-rs/canvas';
+import * as path from 'path';
 import type { Sharp, SharpOptions } from 'sharp';
 
 // sharp resolves to a CommonJS function at runtime despite its ESM types.
@@ -71,6 +72,20 @@ const THUMB_QUALITY = 72;
 export const PAGE_EXTENSION = 'webp';
 export const PAGE_CONTENT_TYPE = 'image/webp';
 
+/**
+ * Where pdf.js finds the fourteen fonts a PDF is allowed to reference without
+ * embedding them — Helvetica, Times, Courier and friends.
+ *
+ * Resolved through the package rather than a relative path, so it survives both
+ * the compile into dist/ and wherever the installer decides to put the package.
+ * pdf.js hands this straight to fs.readFile after checking it ends in a slash,
+ * so it wants a plain path with forward slashes, not a file:// URL.
+ */
+const STANDARD_FONT_DATA_URL =
+  path
+    .join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts')
+    .replace(/\\/g, '/') + '/';
+
 /** Guards against a pathological PDF filling storage with one huge text blob. */
 const MAX_TEXT_PER_PAGE = 20_000;
 
@@ -133,7 +148,19 @@ export class PdfRenderService {
       disableWorker: true,
       disableFontFace: true,
       isEvalSupported: false,
-      useSystemFonts: true,
+      // Draw every glyph from the font programs in the PDF, and from the
+      // bundled copies of the standard fourteen, rather than asking the host
+      // for a font by name.
+      //
+      // Asking the host is what `useSystemFonts` does, and it makes rendering a
+      // property of the machine: a developer laptop full of fonts silently
+      // substitutes something for each one, while a container with none draws
+      // nothing at all and pages come out with their text missing. Verified by
+      // rendering a real guide with every host font removed — text that had
+      // vanished came back, and in the typeface the document actually asks for
+      // instead of whatever the host happened to offer.
+      useSystemFonts: false,
+      standardFontDataUrl: STANDARD_FONT_DATA_URL,
     });
     const doc = await loadingTask.promise;
     const total: number = doc.numPages;
