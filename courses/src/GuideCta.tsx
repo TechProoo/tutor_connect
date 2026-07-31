@@ -1,4 +1,4 @@
-import { WhatsappIcon } from './icons'
+import { ArrowIcon, PagesIcon, WhatsappIcon } from './icons'
 
 /**
  * Sales contact for students who land here without a code. Defaults to the
@@ -30,10 +30,11 @@ export function GuideCta() {
   return (
     <aside className="cta">
       <div className="cta-head">
-        <span className="cta-emoji" aria-hidden="true">
-          📘
+        <span className="cta-icon" aria-hidden="true">
+          <PagesIcon size={21} />
         </span>
         <div>
+          <span className="cta-kicker">Physics &amp; Chemistry</span>
           <h2 className="cta-title">Get Your Revision Guide</h2>
           <p className="cta-sub">
             Need the complete Physics or Chemistry Revision Guide? Message us on
@@ -48,10 +49,14 @@ export function GuideCta() {
         target="_blank"
         rel="noreferrer"
       >
-        <WhatsappIcon size={19} />
-        <span>
-          WhatsApp <strong>{prettyNumber(NUMBER)}</strong>
+        <span className="cta-whatsapp-icon">
+          <WhatsappIcon size={18} />
         </span>
+        <span className="cta-btn-copy">
+          <span>Message us on WhatsApp</span>
+          <strong>{prettyNumber(NUMBER)}</strong>
+        </span>
+        <ArrowIcon size={17} className="cta-arrow" />
       </a>
     </aside>
   )
