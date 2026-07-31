@@ -1,0 +1,23 @@
+# Railway build & deploy config for the Tutor Connect backend.
+#
+# Railway has to be pointed at this folder: set the service's Root Directory to
+# "backend" in the dashboard, under Settings → Source. The repository root is a
+# monorepo of four apps and holds no package.json of its own, so a build from
+# the root finds nothing to detect and fails within seconds. This file is only
+# read once the root directory points here.
+
+[build]
+builder = "NIXPACKS"
+# Mirrors the build in render.yaml. The Prisma client is generated rather than
+# committed, so it has to exist before the Nest build compiles against it.
+buildCommand = "npm ci && npx prisma generate && npm run build"
+
+[deploy]
+startCommand = "npm run start:prod"
+# The app binds to $PORT, which Railway sets.
+healthcheckPath = "/"
+# Rasterising a guide is slow and CPU-bound; a generous timeout keeps a health
+# check from failing a boot that is merely busy.
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
