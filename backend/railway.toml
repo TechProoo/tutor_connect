@@ -7,15 +7,19 @@
 # read once the root directory points here.
 
 [build]
-builder = "NIXPACKS"
-# Mirrors the build in render.yaml. The Prisma client is generated rather than
-# committed, so it has to exist before the Nest build compiles against it.
+# The builder installs dependencies itself before running this, so this must not
+# reinstall them: `npm ci` starts by deleting node_modules, which fails outright
+# against the builder's own layer with EBUSY on node_modules/.cache.
 #
-# --include=dev is load-bearing: the compiler and the Nest CLI are dev
-# dependencies, and npm omits those whenever NODE_ENV is production. That is set
-# here because the app wants it at runtime, which would otherwise leave the build
-# without the very tools it runs.
-buildCommand = "npm ci --include=dev && npx prisma generate && npm run build"
+# `npm install` is left in front of the build because it does not delete
+# anything. It is a near no-op when the dependencies are already complete, and
+# fills in the compiler and the Nest CLI when they are not — both are dev
+# dependencies, which npm skips whenever NODE_ENV is production, and the app
+# wants that set at runtime.
+#
+# The Prisma client is generated rather than committed, so it has to exist
+# before Nest compiles against it.
+buildCommand = "npm install --include=dev --no-audit --no-fund && npx prisma generate && npm run build"
 
 [deploy]
 startCommand = "npm run start:prod"
