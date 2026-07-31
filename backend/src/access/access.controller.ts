@@ -104,6 +104,13 @@ export class AccessController {
   /**
    * Page-navigator preview. Unlike a full page these are identical for every
    * buyer and unreadably small, so they may be cached by the browser.
+   *
+   * Which guide this is comes from the device token, not the path, so the URL
+   * alone does not distinguish one guide's page 1 from another's. The caller
+   * passes a `v` identifying the guide and version purely so the browser keeps
+   * them in separate cache entries; nothing here reads it. Without it, a second
+   * code redeemed on the same browser showed the first guide's previews for the
+   * hour this header buys.
    */
   @Get('thumb/:n')
   @Header('Cache-Control', 'private, max-age=3600')

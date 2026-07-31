@@ -123,6 +123,9 @@ export function Reader({
 }) {
   const { guide, buyer } = session
   const total = guide.pageCount
+  // Previews are cached by the browser for an hour against a URL that says
+  // nothing about which guide it belongs to, so the edition has to.
+  const thumbTag = `${guide.id}.${guide.version}`
   const resumeKey = `tc-reader-page:${guide.id}`
   const bookmarkKey = `tc-reader-bookmarks:${guide.id}`
   const notesKey = `tc-reader-notes:${guide.id}`
@@ -249,7 +252,7 @@ export function Reader({
         if (abortController.current.signal.aborted) {
           abortController.current = new AbortController()
         }
-        const url = await fetchThumb(n, abortController.current.signal)
+        const url = await fetchThumb(n, thumbTag, abortController.current.signal)
         setThumbs((prev) => {
           if (prev[n]) {
             URL.revokeObjectURL(url)
@@ -280,7 +283,7 @@ export function Reader({
         loadingThumbs.current.delete(n)
       }
     },
-    [total],
+    [total, thumbTag],
   )
 
   const jump = useCallback(

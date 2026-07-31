@@ -188,9 +188,20 @@ export function fetchPage(n: number, signal?: AbortSignal): Promise<string> {
 /**
  * Fetch a page-navigator preview — a fraction of the weight of a full page,
  * which matters when a guide runs to a hundred-odd pages.
+ *
+ * `tag` identifies which guide edition the preview belongs to, and exists
+ * purely to keep them apart in the browser cache. The route resolves the guide
+ * from the device token, so every guide's page 1 preview would otherwise be the
+ * same URL — and these are served cacheable for an hour, so redeeming a second
+ * code showed the first guide's previews until that expired. Replacing a PDF
+ * had the same problem, which is why the version belongs in here too.
  */
-export function fetchThumb(n: number, signal?: AbortSignal): Promise<string> {
-  return fetchImage(`/access/thumb/${n}`, signal);
+export function fetchThumb(
+  n: number,
+  tag: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  return fetchImage(`/access/thumb/${n}?v=${encodeURIComponent(tag)}`, signal);
 }
 
 /** The guide's table of contents; empty when the PDF carried no bookmarks. */
