@@ -617,9 +617,6 @@ export function Reader({
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c'].includes(k)) {
         e.preventDefault()
       }
-      if (e.key === 'PrintScreen') {
-        navigator.clipboard?.writeText('').catch(() => undefined)
-      }
       if (e.key === 'Escape') {
         setFocusMode(false)
         setSidebarOpen(false)
@@ -679,6 +676,16 @@ export function Reader({
       }
     }
 
+    // The capture itself is already gone by the time this runs, so this is
+    // about the copy that lands on the clipboard and the shot after it. Chrome
+    // on Windows only ever delivers PrintScreen as a keyup, so watching keydown
+    // alone left the most common desktop case unhandled.
+    const onPrintScreen = (e: KeyboardEvent) => {
+      if (e.key !== 'PrintScreen') return
+      navigator.clipboard?.writeText('').catch(() => undefined)
+      setVeiled(true)
+    }
+
     const onVisibility = () => setVeiled(document.visibilityState === 'hidden')
     const onBlur = () => setVeiled(true)
     const onFocus = () => setVeiled(false)
@@ -688,6 +695,8 @@ export function Reader({
     document.addEventListener('cut', stop)
     document.addEventListener('dragstart', stop)
     document.addEventListener('keydown', onKey)
+    document.addEventListener('keydown', onPrintScreen)
+    document.addEventListener('keyup', onPrintScreen)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('blur', onBlur)
     window.addEventListener('focus', onFocus)
@@ -698,6 +707,8 @@ export function Reader({
       document.removeEventListener('cut', stop)
       document.removeEventListener('dragstart', stop)
       document.removeEventListener('keydown', onKey)
+      document.removeEventListener('keydown', onPrintScreen)
+      document.removeEventListener('keyup', onPrintScreen)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('blur', onBlur)
       window.removeEventListener('focus', onFocus)
