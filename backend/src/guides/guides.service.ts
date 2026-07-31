@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { GuideStatus } from '@prisma/client';
+import { GuideStatus, Prisma, type Guide } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
@@ -34,6 +34,11 @@ export const INDEX_FILE = 'index.json';
 
 /** Subfolder holding page-navigator previews. */
 export const THUMB_FOLDER = 'thumbs';
+
+/** True when a write failed because the row it targeted is no longer there. */
+function isMissingRecord(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025';
+}
 
 @Injectable()
 export class GuidesService {
@@ -130,10 +135,24 @@ export class GuidesService {
     // Only the status moves now. A replacement keeps serving the previous
     // version (pagePrefix, pageCount and published are untouched) until the new
     // one is fully rendered, so buyers never hit a half-built guide.
-    const updated = await this.prisma.guide.update({
-      where: { id },
-      data: { sourceKey, status: GuideStatus.PROCESSING, error: null },
-    });
+    let updated: Guide;
+    try {
+      updated = await this.prisma.guide.update({
+        where: { id },
+        data: { sourceKey, status: GuideStatus.PROCESSING, error: null },
+      });
+    } catch (e) {
+      // Storing the PDF takes long enough that the guide can be deleted while
+      // it is still arriving, which used to surface as a raw database error and
+      // leave the file behind with nothing pointing at it.
+      if (isMissingRecord(e)) {
+        await this.storage.remove([sourceKey]).catch(() => undefined);
+        throw new NotFoundException(
+          'This guide was deleted while its PDF was uploading. Create it again and re-upload.',
+        );
+      }
+      throw e;
+    }
 
     // Rasterising is slow; run it after the response so the upload returns fast.
     void this.process(id, file.buffer, base, guide.version, version, isReplacement);
@@ -242,6 +261,15 @@ export class GuidesService {
 
       this.logger.log(`Guide ${id} ready — ${total} pages (v${version})`);
     } catch (e) {
+      // A guide deleted while it was still rendering is not a failure worth
+      // reporting: there is nothing left to mark failed, and the pages it did
+      // write are cleaned up rather than left pointing at a row that has gone.
+      if (isMissingRecord(e)) {
+        this.logger.log(`Guide ${id} was deleted while rendering — discarding it`);
+        await this.storage.removePrefix(base).catch(() => undefined);
+        return;
+      }
+
       const message = e instanceof Error ? e.message : String(e);
       this.logger.error(`Guide ${id} failed to render: ${message}`);
       await this.prisma.guide
