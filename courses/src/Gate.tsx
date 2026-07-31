@@ -112,7 +112,7 @@ export function Gate({
           </section>
 
           <div>
-            <GuideCta />
+            <GuideCta guides={catalog} />
 
             <section className="card">
               <h2 className="card-title">Unlock your guide</h2>
