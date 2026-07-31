@@ -10,7 +10,12 @@
 builder = "NIXPACKS"
 # Mirrors the build in render.yaml. The Prisma client is generated rather than
 # committed, so it has to exist before the Nest build compiles against it.
-buildCommand = "npm ci && npx prisma generate && npm run build"
+#
+# --include=dev is load-bearing: the compiler and the Nest CLI are dev
+# dependencies, and npm omits those whenever NODE_ENV is production. That is set
+# here because the app wants it at runtime, which would otherwise leave the build
+# without the very tools it runs.
+buildCommand = "npm ci --include=dev && npx prisma generate && npm run build"
 
 [deploy]
 startCommand = "npm run start:prod"
