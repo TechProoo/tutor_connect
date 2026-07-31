@@ -7,10 +7,14 @@
 
 import { facultyShortName, type Role, type SurveyResponse } from './data'
 
+// `||` rather than `??`: a blank VITE_API_URL has to fall through to the
+// default too. An empty base makes every call same-origin, and the SPA
+// redirect answers those with index.html and a 200, so the failure surfaces
+// as an HTML-parsed-as-JSON error rather than anything mentioning the API.
 const API_URL: string =
-  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_URL?.trim() ||
   (import.meta.env.PROD
-    ? 'https://tutorconnect-production-fafa.up.railway.app'
+    ? 'https://tutorconnect-production-3a39.up.railway.app'
     : 'http://localhost:3001')
 
 const KEY_STORAGE = 'tc-admin-key'
@@ -50,6 +54,16 @@ async function get<T>(path: string): Promise<T> {
   }
   if (res.status === 401) throw new UnauthorizedError()
   if (!res.ok) throw new Error(`API error ${res.status} on ${path}`)
+  // A 200 that isn't JSON means the request never reached the API — almost
+  // always a misconfigured API_URL leaving it same-origin, where the SPA
+  // redirect serves index.html. Say that, rather than letting res.json()
+  // report a stray '<'.
+  if (!res.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(
+      `Expected JSON from the API but got ${res.headers.get('content-type') ?? 'no content type'} ` +
+        `(requested ${API_URL}). Check VITE_API_URL on this site.`,
+    )
+  }
   return res.json() as Promise<T>
 }
 

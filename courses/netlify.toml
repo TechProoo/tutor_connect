@@ -2,7 +2,7 @@
 #
 # Create a SEPARATE Netlify site from this repo and set its
 # "Base directory" to `courses` — Netlify then reads this file.
-# Required environment variable: VITE_API_URL (the Render backend URL).
+# Required environment variable: VITE_API_URL (the Railway backend URL).
 
 [build]
   command = "npm run build"

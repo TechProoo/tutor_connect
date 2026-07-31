@@ -5,10 +5,11 @@
 
 import { getAdminKey, UnauthorizedError } from './api'
 
+// See the note in api.ts: `||` so a blank VITE_API_URL falls back too.
 const API_URL: string =
-  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_URL?.trim() ||
   (import.meta.env.PROD
-    ? 'https://tutorconnect-production-fafa.up.railway.app'
+    ? 'https://tutorconnect-production-3a39.up.railway.app'
     : 'http://localhost:3001')
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -39,7 +40,22 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     throw new Error(message)
   }
-  return res.status === 204 ? (undefined as T) : ((await res.json()) as T)
+  if (res.status === 204) return undefined as T
+  assertJson(res)
+  return (await res.json()) as T
+}
+
+/**
+ * A 200 that isn't JSON means the request never reached the API — almost always
+ * a misconfigured API_URL leaving it same-origin, where the SPA redirect serves
+ * index.html. Say that, rather than letting res.json() report a stray '<'.
+ */
+function assertJson(res: Response): void {
+  if (res.headers.get('content-type')?.includes('application/json')) return
+  throw new Error(
+    `Expected JSON from the API but got ${res.headers.get('content-type') ?? 'no content type'} ` +
+      `(requested ${API_URL}). Check VITE_API_URL on this site.`,
+  )
 }
 
 const post = <T>(p: string, body?: unknown) =>

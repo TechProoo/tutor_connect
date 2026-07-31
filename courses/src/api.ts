@@ -2,10 +2,12 @@
 // The device token is the student's only credential: it is issued once at
 // redemption and replayed on every request from that browser.
 
+// `||` rather than `??`: a blank VITE_API_URL has to fall back too, or every
+// call goes same-origin and the SPA redirect answers it with index.html.
 const API_URL: string =
-  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_URL?.trim() ||
   (import.meta.env.PROD
-    ? "https://tutorconnect-production-fafa.up.railway.app"
+    ? "https://tutorconnect-production-3a39.up.railway.app"
     : "http://localhost:3001");
 
 const TOKEN_KEY = "tc-device-token";

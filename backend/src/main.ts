@@ -46,7 +46,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // Trust Render's proxy so req.ip reflects the real client address.
+  // Trust Railway's proxy so req.ip reflects the real client address.
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use(cookieParser());
 

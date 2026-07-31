@@ -1,9 +1,11 @@
-// Small API client for the TutorConnect backend (NestJS on Render).
+// Small API client for the TutorConnect backend (NestJS on Railway).
 // VITE_API_URL overrides the target; dev falls back to the local backend.
+// `||` rather than `??`, so a blank value falls back instead of making every
+// call same-origin, where the SPA redirect answers with index.html.
 const API_URL: string =
-  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_URL?.trim() ||
   (import.meta.env.PROD
-    ? 'https://tutorconnect-production-fafa.up.railway.app'
+    ? 'https://tutorconnect-production-3a39.up.railway.app'
     : 'http://localhost:3001')
 
 /** Drop empty strings / empty arrays so optional fields stay unset. */
